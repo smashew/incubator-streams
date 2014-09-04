@@ -1,13 +1,20 @@
 package org.apache.streams.builders.threaded;
 
-import com.google.common.util.concurrent.*;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.streams.core.StreamsDatum;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -61,14 +68,24 @@ public class ThreadingController {
                 TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<Runnable>(this.numThreads));
 
+        this.threadPoolExecutor.setThreadFactory(new BasicThreadFactory.Builder()
+                .namingPattern("apache-streams")
+                .priority(4)
+                .build());
+
         this.queueShuffler = new ThreadPoolExecutor(
                 this.numThreads,
                 this.numThreads,
                 0L,
                 TimeUnit.SECONDS,
-                new ArrayBlockingQueue<Runnable>(this.numThreads),
+                new ArrayBlockingQueue<Runnable>(this.numThreads * 50),
                 new ThreadPoolExecutor.CallerRunsPolicy());
 
+
+        this.queueShuffler.setThreadFactory(new BasicThreadFactory.Builder()
+                .namingPattern("q-mover")
+                .priority(7)
+                .build());
 
         this.listeningExecutorService = MoreExecutors.listeningDecorator(this.threadPoolExecutor);
     }
