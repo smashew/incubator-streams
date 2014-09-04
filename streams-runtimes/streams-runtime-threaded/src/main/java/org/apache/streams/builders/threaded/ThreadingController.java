@@ -56,7 +56,7 @@ public class ThreadingController {
         return itemPoppedCondition;
     }
 
-    public boolean isWorking() {
+    public synchronized boolean isWorking() {
 
         if(getWorkingCount() > 0) {
             return true;
