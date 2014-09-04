@@ -146,7 +146,6 @@ public abstract class BaseStreamsTask implements StreamsTask {
 
             while ((t.getInQueue().remainingCapacity() - 500) < lock.getLock().get()) {
                 try {
-                    Thread.yield();
                     lock.getPopped().await();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
