@@ -9,8 +9,12 @@ public class TwitterErrorHandler {
     private final static Logger LOGGER = LoggerFactory.getLogger(TwitterErrorHandler.class);
 
     protected static final long INITIAL_BACK_OFF = 1000;
-    protected static final long MAX_BACKOFF = 1000 * 30;
+    protected static final long MAX_BACKOFF = 1000 * 10;
     protected static long BACKOFF = INITIAL_BACK_OFF;
+
+    public static void resetBackOff() {
+        BACKOFF = INITIAL_BACK_OFF;
+    }
 
     public static int handleTwitterError(Twitter twitter, Exception exception) {
         if (exception instanceof TwitterException) {
@@ -18,7 +22,8 @@ public class TwitterErrorHandler {
             if (e.exceededRateLimitation()) {
                 LOGGER.warn("Rate Limit Exceeded");
                 try {
-                    Thread.sleep(BACKOFF *= 2);
+                    BACKOFF *= 1.2;
+                    Thread.sleep(Math.min(BACKOFF, MAX_BACKOFF));
                 } catch (InterruptedException e1) {
                 }
                 return 1;
@@ -26,7 +31,8 @@ public class TwitterErrorHandler {
                 LOGGER.info("Twitter Network Issues Detected. Backing off...");
                 LOGGER.info("{} - {}", e.getExceptionCode(), e.getLocalizedMessage());
                 try {
-                    Thread.sleep(BACKOFF *= 2);
+                    BACKOFF *= 1.2;
+                    Thread.sleep(Math.min(BACKOFF, MAX_BACKOFF));
                 } catch (InterruptedException e1) {
                 }
                 return 1;

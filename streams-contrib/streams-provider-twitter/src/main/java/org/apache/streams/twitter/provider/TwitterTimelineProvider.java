@@ -22,12 +22,8 @@ import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class TwitterTimelineProvider implements StreamsProvider, Serializable {
 
@@ -47,7 +43,7 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
         this.config = config;
     }
 
-    protected final Queue<StreamsDatum> providerQueue = new ArrayBlockingQueue<StreamsDatum>(500);
+    protected final Queue<StreamsDatum> providerQueue = new ArrayBlockingQueue<StreamsDatum>(5000);
 
     protected int idsCount;
     protected Iterator<Long> ids;
@@ -60,10 +56,34 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
     Boolean jsonStoreEnabled;
     Boolean includeEntitiesEnabled;
 
-    private static ExecutorService newFixedThreadPoolWithQueueSize(int nThreads, int queueSize) {
-        return new ThreadPoolExecutor(nThreads, nThreads,
-                5000L, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<Runnable>(queueSize, true), new ThreadPoolExecutor.CallerRunsPolicy());
+    private static ExecutorService newFixedThreadPoolWithQueueSize(int nThreads) {
+        return new ThreadPoolExecutor(
+                nThreads,
+                nThreads,
+                0L, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<Runnable>(nThreads),
+                new RejectedExecutionHandler() {
+                    public synchronized void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+                        // Wait until the pool is free for another item
+
+                        if (executor.getMaximumPoolSize() == executor.getQueue().size()) {
+                            while (executor.getMaximumPoolSize() == executor.getQueue().size())
+                                safeSleep();
+                        }
+                        executor.submit(r);
+                    }
+
+                    public void safeSleep() {
+                        try {
+                            // wait one tenth of a millisecond
+                            Thread.yield();
+                            Thread.sleep(5);
+                        }
+                        catch(Exception e) {
+                            /* no op */
+                        }
+                    }
+                });
     }
 
     public TwitterTimelineProvider() {
@@ -100,30 +120,30 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
 
         Paging paging = new Paging(1, 200);
         List<Status> statuses = null;
-        boolean KeepGoing = true;
-        boolean hadFailure = false;
 
         do
         {
+            Twitter client = getTwitterClient();
+
             int keepTrying = 0;
 
             // keep trying to load, give it 5 attempts.
             while (keepTrying < 5) {
-                Twitter client = null;
                 try {
-                    client = getTwitterClient();
 
-                    LOGGER.debug("Using Twitter Client: {}", client.getOAuthAccessToken());
-
+                    LOGGER.info("Using Twitter Client: {}", client.getOAuthAccessToken());
                     statuses = client.getUserTimeline(currentId, paging);
 
+                    TwitterErrorHandler.resetBackOff();
+
                     for (Status tStat : statuses) {
-                        String json = TwitterObjectFactory.getRawJSON(tStat);
-                        ComponentUtils.offerUntilSuccess(new StreamsDatum(json), providerQueue);
+                        if(shouldEmit(tStat)) {
+                            String json = TwitterObjectFactory.getRawJSON(tStat);
+                            ComponentUtils.offerUntilSuccess(new StreamsDatum(json), providerQueue);
+                        }
                     }
 
                     paging.setPage(paging.getPage() + 1);
-
                     keepTrying = 10;
                 }
                 catch(TwitterException twitterException) {
@@ -137,7 +157,9 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
         while (shouldContinuePulling(statuses));
     }
 
-    private Map<Long, Long> userPullInfo;
+    protected boolean shouldEmit(Status status) {
+        return true;
+    }
 
     protected boolean shouldContinuePulling(List<Status> statuses) {
         return (statuses != null) && (statuses.size() > 0);
@@ -147,8 +169,6 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
         LOGGER.debug("{} readCurrent", STREAMS_ID);
 
         Preconditions.checkArgument(ids.hasNext());
-
-        StreamsResultSet current;
 
         synchronized( TwitterTimelineProvider.class ) {
 
@@ -204,7 +224,7 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
     @Override
     public void prepare(Object o) {
 
-        executor = MoreExecutors.listeningDecorator(newFixedThreadPoolWithQueueSize(5, 20));
+        executor = MoreExecutors.listeningDecorator(newFixedThreadPoolWithQueueSize(3));
 
         Preconditions.checkNotNull(providerQueue);
         Preconditions.checkNotNull(this.klass);
@@ -217,8 +237,8 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
         idsCount = config.getFollow().size();
         ids = config.getFollow().iterator();
 
-        jsonStoreEnabled = Optional.fromNullable(new Boolean(Boolean.parseBoolean(config.getJsonStoreEnabled()))).or(true);
-        includeEntitiesEnabled = Optional.fromNullable(new Boolean(Boolean.parseBoolean(config.getIncludeEntities()))).or(true);
+        jsonStoreEnabled = Optional.fromNullable(Boolean.parseBoolean(config.getJsonStoreEnabled())).or(true);
+        includeEntitiesEnabled = Optional.fromNullable(Boolean.parseBoolean(config.getIncludeEntities())).or(true);
     }
 
 
