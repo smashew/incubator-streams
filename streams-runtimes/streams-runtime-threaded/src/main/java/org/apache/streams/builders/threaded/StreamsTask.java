@@ -19,65 +19,23 @@ package org.apache.streams.builders.threaded;
 
 import org.apache.streams.core.StreamsDatum;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.locks.Condition;
 
 /**
  * Interface for all task that will be used to execute instances of {@link org.apache.streams.core.StreamsOperation}
  * in local mode.
  */
-public interface StreamsTask extends Runnable {
-
-    public void knock();
+public interface StreamsTask {
 
     public StatusCounts getCurrentStatus();
 
     public String getId();
 
-    public Condition getPop();
+    public void process(StreamsDatum datum);
 
-    /**
-     * Informs the task to stop. Tasks may or may not try to empty its inbound queue before halting.
-     */
-    public void stopTask();
+    public void initialize(final Map<String, StreamsTask> ctx);
 
-    /**
-     * Add an input {@link java.util.Queue} for this task.
-     * @param id
-     * the id of the connected queue
-     */
-    public void addInputQueue(String id);
-
-    /**
-     * Add an output {@link java.util.Queue} for this task.
-     * @param id
-     * the id of the connected queue
-     * the queue
-     */
     public void addOutputQueue(String id);
 
-    /**
-     * Set the configuration object that will shared and passed to all instances of StreamsTask.
-     * @param config optional configuration information
-     */
-    public void setStreamConfig(Map<String, Object> config);
-
-    /**
-     * Returns true when the task has not completed. Returns false otherwise
-     * @return true when the task has not completed. Returns false otherwise
-     */
-    public boolean isRunning();
-
-    //public Condition getConditionIsFree();
-
-    /**
-     * Returns the input queues that have been set for this task.
-     * @return list of input queues
-     */
-    public BlockingQueue<StreamsDatum> getInQueue();
-
-    public void initialize();
+    public void cleanup();
 }

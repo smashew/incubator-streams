@@ -18,26 +18,25 @@
 package org.apache.streams.builders.threaded;
 
 import org.apache.streams.core.*;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Condition;
 
-/**
- *
- */
-public class StreamsProviderTask extends BaseStreamsTask  {
+public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(StreamsProviderTask.class);
 
-    private static enum Type {
+    private StreamsProvider provider;
+    private final Type type;
+    private final AtomicBoolean keepRunning = new AtomicBoolean(true);
+    private final Condition lock = new SimpleCondition();
+    private final ThreadingController threadingController;
+
+    public static enum Type {
         PERPETUAL,
         READ_CURRENT,
         READ_NEW,
@@ -47,65 +46,26 @@ public class StreamsProviderTask extends BaseStreamsTask  {
     private static final int START = 0;
     private static final int END = 1;
 
-    private static final int DEFAULT_TIMEOUT_MS = 1000000;
+    private static final int TIMEOUT = 100000000;
+    private static final int DEFAULT_SLEEP = 200;
 
-    private StreamsProvider provider;
-    private AtomicBoolean keepRunning;
-    private Type type;
-    private BigInteger sequence;
-    private DateTime[] dateRange;
-    private Map<String, Object> config;
-    private AtomicBoolean isRunning;
-    private StreamsResultSet streamsResultSet;
-
-    private int timeout;
-    private int zeros = 0;
-    private DatumStatusCounter statusCounter = new DatumStatusCounter();
-    private final ThreadingController threadingController;
-
-    /**
-     * Constructor for a StreamsProvider to execute {@link org.apache.streams.core.StreamsProvider:readCurrent()}
-     *
-     * @param provider
-     */
-    public StreamsProviderTask(ThreadingController threadingController, String id, Map<String, BaseStreamsTask> ctx, StreamsProvider provider, boolean perpetual) {
-        super(id, null, ctx, threadingController);
-        this.threadingController = threadingController;
+    public StreamsProviderTask(String id, Map<String, Object> config, StreamsProvider provider, Type type, ThreadingController threadingController) {
+        super(id, config);
         this.provider = provider;
-        if (perpetual)
-            this.type = Type.PERPETUAL;
-        else
-            this.type = Type.READ_CURRENT;
-        this.keepRunning = new AtomicBoolean(true);
-        this.isRunning = new AtomicBoolean(true);
-        this.timeout = DEFAULT_TIMEOUT_MS;
+        this.type = type;
+        this.threadingController = threadingController;
     }
 
-    public void setTimeout(int timeout) {
-        this.timeout = timeout;
+    public boolean isRunning() {
+        return this.keepRunning.get();
     }
 
-    @Override
-    public BlockingDeque<StreamsDatum> getInQueue() {
-        throw new UnsupportedOperationException(this.getClass().getName() + " does not support method - setInputQueue()");
-    }
-
-    @Override
-    public void setStreamConfig(Map<String, Object> config) {
-        this.config = config;
-    }
-
-    @Override
-    public void initialize() {
-        super.initialize();
-        this.threadingController.flagWorking(this);
+    public Condition getLock() {
+        return this.lock;
     }
 
     @Override
     public void run() {
-
-        // lock, yes, I am running
-        this.isRunning.set(true);
 
         try {
             // TODO allow for configuration objects
@@ -114,6 +74,7 @@ public class StreamsProviderTask extends BaseStreamsTask  {
             switch (this.type) {
                 case PERPETUAL:
                     provider.startStream();
+                    int zeros = 0;
                     while (this.keepRunning.get()) {
                         resultSet = provider.readCurrent();
                         if (resultSet.size() == 0)
@@ -121,10 +82,9 @@ public class StreamsProviderTask extends BaseStreamsTask  {
                         else {
                             zeros = 0;
                         }
-                        this.streamsResultSet = resultSet;
-                        flushResults();
+                        flushResults(resultSet);
                         // the way this works needs to change...
-                        if (zeros > (timeout))
+                        if (zeros > TIMEOUT)
                             this.keepRunning.set(false);
                         safeQuickRest(10);
                     }
@@ -133,31 +93,19 @@ public class StreamsProviderTask extends BaseStreamsTask  {
                     resultSet = this.provider.readCurrent();
                     break;
                 case READ_NEW:
-                    resultSet = this.provider.readNew(this.sequence);
-                    break;
                 case READ_RANGE:
-                    resultSet = this.provider.readRange(this.dateRange[START], this.dateRange[END]);
-                    break;
                 default:
                     throw new RuntimeException("Type has not been added to StreamsProviderTask.");
             }
-            this.streamsResultSet = resultSet;
 
-            if(this.streamsResultSet != null && this.streamsResultSet.getQueue() != null) {
-                /**
-                 * We keep running while the provider tells us that we are running or we still have
-                 * items in queue to be processed.
-                 *
-                 * IF, the keep running flag is turned to off, then we exit immediately
-                 */
-                while ((this.streamsResultSet.isRunning() || !this.streamsResultSet.getQueue().isEmpty()) && this.keepRunning.get()) {
-                    if(streamsResultSet.getQueue().isEmpty()) {
-                        // The process is still running, but there is nothing on the queue...
-                        // we just need to be patient and wait, we yield the execution and
-                        // wait for 1ms to see if anything changes.
-                        safeQuickRest(5);
+            if(resultSet != null && resultSet.getQueue() != null) {
+
+                while (resultSet.isRunning() || resultSet.getQueue().size() > 0) {
+                    // Is there anything to do?
+                    if(resultSet.getQueue().isEmpty()) {
+                        safeQuickRest(5);           // then rest
                     } else {
-                        flushResults();
+                        flushResults(resultSet);    // then work
                     }
                 }
             }
@@ -165,20 +113,14 @@ public class StreamsProviderTask extends BaseStreamsTask  {
             LOGGER.error("There was an unknown error while attempting to read from the provider. This provider cannot continue with this exception.");
             LOGGER.error("The stream will continue running, but not with this provider.");
             LOGGER.error("Exception: {}", e);
-            this.isRunning.set(false);
         } finally {
             this.provider.cleanUp();
-            this.threadingController.flagNotWorking(this);
-            this.isRunning.set(false);
+            this.keepRunning.set(false);
+            this.lock.signalAll();
         }
     }
 
-    @Override
-    public boolean isRunning() {
-        return this.isRunning.get();
-    }
-
-    public void flushResults() {
+    public void flushResults(StreamsResultSet streamsResultSet) {
         try {
             StreamsDatum datum;
             while (!streamsResultSet.getQueue().isEmpty() && (datum = streamsResultSet.getQueue().poll()) != null) {
@@ -191,7 +133,7 @@ public class StreamsProviderTask extends BaseStreamsTask  {
                 if (!this.keepRunning.get())
                     break;
 
-                processNext(datum);
+                workMe(datum);
             }
         }
         catch(Throwable e) {
@@ -199,24 +141,23 @@ public class StreamsProviderTask extends BaseStreamsTask  {
         }
     }
 
-    private void processNext(StreamsDatum datum) {
-        Collection<ThreadingController.LockCounter> locks = waitForOutBoundQueueToBeFree();
-        try {
-            super.addToOutgoingQueue(datum);
-            statusCounter.incrementStatus(DatumStatus.SUCCESS);
-        } catch (Throwable e) {
-            statusCounter.incrementStatus(DatumStatus.FAIL);
-        } finally {
-            releaseLocks(locks);
-        }
+    @Override
+    public void cleanup() {
+        this.provider.cleanUp();
     }
 
-    public StatusCounts getCurrentStatus() {
-        return new StatusCounts(this.streamsResultSet == null ? 0 :
-                this.streamsResultSet.getQueue() == null ? 0 : this.streamsResultSet.getQueue().size(),
-                0,
-                this.statusCounter.getSuccess(),
-                this.statusCounter.getFail());
+    private void workMe(final StreamsDatum datum) {
+        this.threadingController.execute(new Runnable() {
+            @Override
+            public void run() {
+                sendToChildren(datum);
+            }
+        });
+    }
+
+    @Override
+    protected Collection<StreamsDatum> processInternal(StreamsDatum datum) {
+        return null;
     }
 
     protected void safeQuickRest(int waitTime) {

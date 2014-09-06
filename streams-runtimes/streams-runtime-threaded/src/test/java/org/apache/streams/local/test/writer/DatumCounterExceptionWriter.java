@@ -19,19 +19,22 @@ package org.apache.streams.local.test.writer;
 
 import org.apache.streams.core.StreamsDatum;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class DatumCounterExceptionWriter extends DatumCounterWriter{
-    private final int numErrorsToThrow;
-    private int numErrorsThrown;
+    private final AtomicInteger numErrorsToThrow;
+    private final AtomicInteger numErrorsThrown;
 
     public DatumCounterExceptionWriter(int numErrorsToThrow) {
         super(0);
 
-        this.numErrorsToThrow = numErrorsToThrow <= 0 ? 1 : numErrorsToThrow;
-        this.numErrorsThrown = 0;
+        this.numErrorsToThrow = new AtomicInteger(numErrorsToThrow <= 0 ? 1 : numErrorsToThrow);
+        this.numErrorsThrown = new AtomicInteger(0);
     }
 
     public void write(StreamsDatum entry) {
-        if(numErrorsThrown++ < numErrorsToThrow) {
+
+        if(numErrorsThrown.getAndIncrement() < numErrorsToThrow.get()) {
             throw new RuntimeException();
         } else {
 

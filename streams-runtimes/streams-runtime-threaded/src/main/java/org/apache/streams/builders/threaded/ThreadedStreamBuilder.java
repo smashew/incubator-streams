@@ -28,6 +28,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 
 /**
  * {@link ThreadedStreamBuilder} implementation to run a data processing stream in a single
@@ -43,7 +44,7 @@ public class ThreadedStreamBuilder implements StreamBuilder {
     private final Map<String, StreamComponent> providers;
     private final Map<String, StreamComponent> components;
     private final Map<String, Object> streamConfig;
-    private final Map<String, BaseStreamsTask> tasks = new LinkedHashMap<String, BaseStreamsTask>();
+    private final Map<String, StreamsTask> tasks = new LinkedHashMap<String, StreamsTask>();
     private final Collection<StreamBuilderEventHandler> eventHandlers = new ArrayList<StreamBuilderEventHandler>();
 
     private final ThreadingController threadingController;
@@ -183,7 +184,13 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
         this.tasks.clear();
         createTasks();
-        this.executor = Executors.newFixedThreadPool(tasks.size());
+
+        int numProviders = 0;
+        for(StreamsTask task : this.tasks.values())
+            if(task instanceof Runnable)
+                numProviders++;
+
+        this.executor = Executors.newFixedThreadPool(numProviders);
 
         try {
             // if anyone would like to listen in to progress events
@@ -192,14 +199,6 @@ public class ThreadedStreamBuilder implements StreamBuilder {
                 public void run() {
 
                     final Map<String, StatusCounts> updateMap = getUpdateCounts();
-
-                    /*
-                    for(final String k : updateMap.keySet()) {
-                        final StatusCounts counts = updateMap.get(k);
-                        LOGGER.debug("Finishing: {} - Queue[{}] Working[{}] Success[{}] Failed[{}] ", k,
-                                counts.getQueue(), counts.getWorking(), counts.getSuccess(), counts.getFailed());
-                    }
-                    */
 
                     if (eventHandlers.size() > 0) {
                         for (final StreamBuilderEventHandler eventHandler : eventHandlers) {
@@ -224,16 +223,30 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
             // Starting all the tasks
             for(StreamsTask task : this.tasks.values())
-                this.executor.execute(task);
+                if(task instanceof Runnable)
+                    this.executor.execute((Runnable)task);
 
             LOGGER.debug("----------------------------------- Waiting for everything to be completed -----------------------------------");
 
-            // Wait for everything to be completed.
-            while(this.threadingController.isWorking())
-                this.threadingController.getConditionWorking().await();
+            Condition condition = null;
+            while((condition = getOffendingLock()) != null) {
+                condition.await();
+            }
+
+            while(this.threadingController.isRunning())
+                this.threadingController.getLock().await();
+
+            this.threadingController.shutDown();
+
+            this.executor.shutdown();
+            this.executor.awaitTermination(30, TimeUnit.MINUTES);
 
             LOGGER.debug("----------------------------------- Everything is completed -----------------------------------");
 
+            for(StreamsTask t : this.tasks.values())
+                t.cleanup();
+
+            LOGGER.debug("----------------------------------- Everything is cleaned up -----------------------------------");
 
 
             for(final String k : tasks.keySet()) {
@@ -242,7 +255,6 @@ public class ThreadedStreamBuilder implements StreamBuilder {
                         counts.getQueue(), counts.getWorking(), counts.getSuccess(), counts.getFailed());
             }
 
-            shutdown();
 
         } catch (Throwable e) {
             // No Operation
@@ -261,6 +273,15 @@ public class ThreadedStreamBuilder implements StreamBuilder {
             // Kill the timer
             timer.cancel();
         }
+    }
+
+    private Condition getOffendingLock() {
+        for(StreamsTask t : this.tasks.values()) {
+            if(t instanceof StreamsProviderTask)
+                if(((StreamsProviderTask)t).isRunning())
+                    return ((StreamsProviderTask)t).getLock();
+        }
+        return null;
     }
 
     private void shutdownExecutor() {
@@ -283,28 +304,17 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
     protected void shutdown() throws InterruptedException {
         LOGGER.debug("Shutting down...");
-        //give the stream 30secs to try to shutdown gracefully, then force shutdown otherwise
-        for(BaseStreamsTask task : this.tasks.values())
-            task.stopTask();
-
-        shutdownExecutor();
     }
 
     protected void createTasks() {
-        for (StreamComponent prov : this.providers.values()) {
-            BaseStreamsTask task = prov.createConnectedTask(this.tasks, getTimeout(), this.threadingController);
-            task.setStreamConfig(this.streamConfig);
-            this.tasks.put(prov.getId(), task);
-        }
+        for (StreamComponent prov : this.providers.values())
+            this.tasks.put(prov.getId(), prov.createConnectedTask(this.streamConfig, this.threadingController));
 
-        for (StreamComponent comp : this.components.values()) {
-            BaseStreamsTask task = comp.createConnectedTask(this.tasks, getTimeout(), this.threadingController);
-            task.setStreamConfig(this.streamConfig);
-            this.tasks.put(comp.getId(), task);
-        }
+        for (StreamComponent comp : this.components.values())
+            this.tasks.put(comp.getId(), comp.createConnectedTask(this.streamConfig, this.threadingController));
 
         for(StreamsTask t : this.tasks.values())
-            t.initialize();
+            t.initialize(this.tasks);
     }
 
     public void stop() {

@@ -121,10 +121,11 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
         Paging paging = new Paging(1, 200);
         List<Status> statuses = null;
 
+        // use this client for the entire capturing of the timeline
+        Twitter client = getTwitterClient();
+
         do
         {
-            Twitter client = getTwitterClient();
-
             int keepTrying = 0;
 
             // keep trying to load, give it 5 attempts.

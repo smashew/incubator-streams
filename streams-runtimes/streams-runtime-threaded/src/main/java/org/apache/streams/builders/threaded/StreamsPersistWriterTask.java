@@ -17,88 +17,28 @@
  */
 package org.apache.streams.builders.threaded;
 
-import com.google.common.util.concurrent.FutureCallback;
-import org.apache.streams.core.DatumStatus;
-import org.apache.streams.core.DatumStatusCounter;
 import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.core.StreamsPersistWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 
 public class StreamsPersistWriterTask extends BaseStreamsTask {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(StreamsPersistWriterTask.class);
 
     protected final StreamsPersistWriter writer;
-    protected Map<String, Object> streamConfig;
-    protected final DatumStatusCounter statusCounter = new DatumStatusCounter();
 
-
-    public StreamsPersistWriterTask(String id, BlockingQueue<StreamsDatum> inQueue, Map<String, BaseStreamsTask> ctx, StreamsPersistWriter writer, ThreadingController threadingController) {
-        super(id, inQueue, ctx, threadingController);
+    public StreamsPersistWriterTask(String id, Map<String, Object> config, StreamsPersistWriter writer) {
+        super(id, config);
         this.writer = writer;
     }
 
-    @Override
-    public void setStreamConfig(Map<String, Object> config) {
-        this.streamConfig = config;
-    }
-
-    @Override
-    public boolean isRunning() {
-        return  getWorkingCount() > 0 || this.inQueue.size() > 0;
-    }
-
-    public StatusCounts getCurrentStatus() {
-        return new StatusCounts(this.inQueue.size(),
-                this.getWorkingCount(),
-                this.statusCounter.getSuccess(),
-                this.statusCounter.getFail());
-    }
-
-    @Override
-    public void run() {
-        try {
-            this.writer.prepare(this.streamConfig);
-
-            while (shouldKeepRunning() || this.inQueue.size() > 0) {
-
-                waitForIncoming();
-
-                if(this.inQueue.size() > 0) {
-                    final StreamsDatum datum = pollNextDatum();
-
-                    Runnable command = new Runnable() {
-                        @Override
-                        public void run() {
-                            writer.write(datum);
-                        }
-                    };
-
-                    FutureCallback callback = new FutureCallback() {
-                        @Override
-                        public void onSuccess(Object o) {
-                            reportCompleted(null);
-                            statusCounter.incrementStatus(DatumStatus.SUCCESS);
-                        }
-
-                        @Override
-                        public void onFailure(Throwable throwable) {
-                            reportCompleted(null);
-                            statusCounter.incrementStatus(DatumStatus.FAIL);
-                        }
-                    };
-
-                    this.threadingController.execute(command, callback);
-                }
-            }
-        } finally {
-            // clean everything up
-            this.writer.cleanUp();
-        }
+    protected Collection<StreamsDatum> processInternal(StreamsDatum datum) {
+        writer.write(datum);
+        return null;
     }
 
     @Override
@@ -106,5 +46,8 @@ public class StreamsPersistWriterTask extends BaseStreamsTask {
         throw new UnsupportedOperationException(this.getClass().getName() + " does not support method - setOutputQueue()");
     }
 
-
+    @Override
+    public void cleanup() {
+        this.writer.cleanUp();
+    }
 }

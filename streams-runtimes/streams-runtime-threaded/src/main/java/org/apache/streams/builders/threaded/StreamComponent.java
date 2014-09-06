@@ -168,21 +168,17 @@ class StreamComponent {
      * inbound and outbound queues are appropriately connected to the parent and child nodes.
      *
      * @return StreamsTask for this component
-     * @param timeout The timeout to use in milliseconds for any tasks that support configurable timeout
      */
-    public BaseStreamsTask createConnectedTask(Map<String, BaseStreamsTask> ctx, int timeout, ThreadingController threadingController) {
+    public StreamsTask createConnectedTask(Map<String, Object> config, ThreadingController threadingController) {
 
-        BaseStreamsTask task;
+        StreamsTask task;
 
         BlockingQueue<StreamsDatum> q = this.inQueue == null ? new ArrayBlockingQueue<StreamsDatum>(100) :
                 (this.inQueue instanceof ArrayBlockingQueue ? (ArrayBlockingQueue<StreamsDatum>)this.inQueue : new ArrayBlockingQueue<StreamsDatum>(50));
         if(this.processor != null) {
             // create the task
 
-            task = new StreamsProcessorTask(this.id, q, ctx, this.processor, threadingController);
-
-            // Processor has an input queue
-            task.addInputQueue(this.id);
+            task = new StreamsProcessorTask(this.id, config, this.processor);
 
             // Processor also has any number of output queues
             for(StreamComponent c : this.outBound.keySet()) {
@@ -192,29 +188,15 @@ class StreamComponent {
         }
         else if(this.writer != null) {
             // create the task
-            task = new StreamsPersistWriterTask(this.id, q, ctx, this.writer, threadingController);
-            task.addInputQueue(this.id);
+            task = new StreamsPersistWriterTask(this.id, config, this.writer);
         }
         else if(this.provider != null) {
-            StreamsProvider prov;
 
-            if(this.numTasks > 1) {
-                throw new IllegalArgumentException("Having multiple providers is not accepted");
-            } else {
-                prov = this.provider;
-            }
-            if(this.dateRange == null && this.sequence == null)
-                task = new StreamsProviderTask(threadingController, this.id, ctx, prov, this.perpetual);
-            else
-                throw new UnsupportedOperationException("This isn't supported");
+            task = new StreamsProviderTask(this.id, config, this.provider, StreamsProviderTask.Type.READ_CURRENT, threadingController);
 
-            //Adjust the timeout if necessary
-            if(timeout > 0) {
-                ((StreamsProviderTask)task).setTimeout(timeout);
-            }
-            for(StreamComponent c : this.outBound.keySet()) {
+            for(StreamComponent c : this.outBound.keySet())
                 task.addOutputQueue(c.getId());
-            }
+
         }
         else {
             throw new InvalidStreamException("Underlying StreamComponoent was NULL.");

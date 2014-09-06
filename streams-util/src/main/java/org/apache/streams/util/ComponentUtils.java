@@ -20,7 +20,6 @@ public class ComponentUtils {
     public static void offerUntilSuccess(Object entry, Queue<Object> queue, int waitTime) {
         if(queue instanceof ArrayBlockingQueue) {
 
-
             boolean notPushed = true;
             try {
                 while((notPushed = !((ArrayBlockingQueue)queue).offer(entry, 1000, TimeUnit.MILLISECONDS))) {
@@ -43,7 +42,8 @@ public class ComponentUtils {
         int waitTime = 1;
         while(!queue.offer(entry)) {
             safeQuickRest(waitTime);
-            waitTime = ((waitTime * 2) > 5000) ? (waitTime * 2) : waitTime;
+            waitTime = ((waitTime * 2) > 50) ? (waitTime * 2) : waitTime;
+            waitTime = Math.min(waitTime, 50);
         }
     }
 
