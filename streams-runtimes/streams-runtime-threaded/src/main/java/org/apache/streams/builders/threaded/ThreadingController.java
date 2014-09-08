@@ -7,9 +7,15 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 
 public class ThreadingController {
@@ -19,17 +25,54 @@ public class ThreadingController {
     private final ThreadPoolExecutor threadPoolExecutor;
     private final ListeningExecutorService listeningExecutorService;
     private final Condition lock = new SimpleCondition();
-    private int numThreads;
 
-    public ThreadingController(int numThreads) {
-        this.numThreads = numThreads == 0 ? 4 : numThreads;
+    private final AtomicInteger numThreads;
+    private double scaleThreashold = .8;
+
+    private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
+
+    private static final ThreadingController INSTANCE = new ThreadingController(Runtime.getRuntime().availableProcessors());
+
+    public static ThreadingController getInstance() {
+        return INSTANCE;
+    }
+
+    public Integer getNumThreads() {
+        return this.numThreads.get();
+    }
+
+
+    private double getProcessCpuLoad()  {
+
+        try {
+            MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+            ObjectName name = ObjectName.getInstance("java.lang:type=OperatingSystem");
+            AttributeList list = mbs.getAttributes(name, new String[]{"ProcessCpuLoad"});
+
+            if (list.isEmpty()) return Double.NaN;
+
+            Attribute att = (Attribute) list.get(0);
+            Double value = (Double) att.getValue();
+
+            if (value == -1.0) return Double.NaN;  // usually takes a couple of seconds before we get real values
+
+            return ((int) (value * 1000) / 10.0);        // returns a percentage value with 1 decimal point precision
+        }
+        catch(Throwable t) {
+            return this.scaleThreashold;
+        }
+    }
+
+    private ThreadingController(int numThreads) {
+
+        this.numThreads = new AtomicInteger(numThreads);
 
         this.threadPoolExecutor = new ThreadPoolExecutor(
-                this.numThreads,
-                this.numThreads,
+                this.numThreads.get(),
+                this.numThreads.get(),
                 0L,
                 TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<Runnable>(this.numThreads));
+                new ArrayBlockingQueue<Runnable>(this.numThreads.get()));
 
         this.threadPoolExecutor.setThreadFactory(new BasicThreadFactory.Builder()
                 .namingPattern("apache-streams [threaded builder] - %d")
@@ -38,32 +81,19 @@ public class ThreadingController {
         this.listeningExecutorService = MoreExecutors.listeningDecorator(this.threadPoolExecutor);
     }
 
-    public boolean isRunning() {
-        return this.threadPoolExecutor.getQueue().size() > 0;
-    }
+    public void execute(final Runnable command, final ThreadingControllerCallback callback) {
 
-    public Condition getLock() {
-        return this.lock;
-    }
-
-    public void shutDown() {
-        try {
-            if (!this.listeningExecutorService.isShutdown()) {
-                // tell the executor to shutdown.
-                this.listeningExecutorService.shutdown();
-                if (!this.listeningExecutorService.awaitTermination(5, TimeUnit.MINUTES))
-                    this.listeningExecutorService.shutdownNow();
-            }
-
-            LOGGER.info("Thread Handler: Shut Down");
+        /* re-size the shared thread-pool if we aren't under significant stress */
+        if(this.getProcessCpuLoad() > this.scaleThreashold) {
+            this.numThreads.set(Math.max(NUM_PROCESSORS * 3, this.numThreads.incrementAndGet()));
         }
-        catch(InterruptedException ioe) {
-            LOGGER.warn("Error shutting down worker thread handler: {}", ioe.getMessage());
+        else {
+            this.numThreads.set(Math.max(this.numThreads.decrementAndGet(), 1));
         }
-    }
 
-    public void execute(Runnable command) {
-        while (this.threadPoolExecutor.getQueue().size() == this.numThreads) {
+        this.threadPoolExecutor.setCorePoolSize(this.numThreads.get());
+
+        while (this.threadPoolExecutor.getQueue().size() == this.numThreads.get()) {
             try {
                 this.lock.await();
             } catch (InterruptedException e) {
@@ -74,9 +104,11 @@ public class ThreadingController {
         FutureCallback alertItIsDone = new FutureCallback() {
             public void onSuccess(Object o) {
                 lock.signal();
+                callback.onSuccess(o);
             }
             public void onFailure(Throwable t) {
                 lock.signal();
+                callback.onSuccess(t);
             }
         };
 

@@ -21,17 +21,16 @@ import org.apache.streams.core.StreamsDatum;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class PassThroughStaticCounterExceptionProcessor extends PassThroughStaticCounterProcessor{
     private final int numErrorsToThrow;
-    private int numErrorsThrown;
+    private final AtomicInteger numErrorsThrown = new AtomicInteger(0);
 
     public PassThroughStaticCounterExceptionProcessor(int delay, int numErrorsToThrow) {
         super(delay);
-
         this.numErrorsToThrow = numErrorsToThrow <= 0 ? 1 : numErrorsToThrow;
-        this.numErrorsThrown = 0;
     }
 
     @Override
@@ -40,7 +39,7 @@ public class PassThroughStaticCounterExceptionProcessor extends PassThroughStati
         super.count.incrementAndGet();
         List<StreamsDatum> result = new LinkedList<StreamsDatum>();
 
-        if(this.numErrorsThrown++ < this.numErrorsToThrow) {
+        if (this.numErrorsThrown.getAndIncrement() < this.numErrorsToThrow) {
             throw new RuntimeException();
         } else {
             result.add(entry);

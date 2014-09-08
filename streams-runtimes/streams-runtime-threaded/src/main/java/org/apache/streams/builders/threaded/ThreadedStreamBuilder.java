@@ -49,43 +49,38 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
     private final ThreadingController threadingController;
 
-    private static final Integer PROCESSOR_CORES = Runtime.getRuntime().availableProcessors();
-
     private Thread shutDownHandler;
 
     /**
      *
      */
     public ThreadedStreamBuilder() {
-        this(new ArrayBlockingQueue<StreamsDatum>(50), null, PROCESSOR_CORES);
+        this(new ArrayBlockingQueue<StreamsDatum>(50), null);
     }
 
     /**
      * @param queue
      */
     public ThreadedStreamBuilder(Queue<StreamsDatum> queue) {
-        this(queue, null, PROCESSOR_CORES);
+        this(queue, null);
     }
 
-    public ThreadedStreamBuilder(Queue<StreamsDatum> queue, int numThreads) {
-        this(queue, null, numThreads);
-    }
 
     /**
      * @param streamConfig
      */
     public ThreadedStreamBuilder(Map<String, Object> streamConfig) {
-        this(new ArrayBlockingQueue<StreamsDatum>(50), streamConfig, PROCESSOR_CORES);
+        this(new ArrayBlockingQueue<StreamsDatum>(50), streamConfig);
     }
 
-    public ThreadedStreamBuilder(Queue<StreamsDatum> queue, Map<String, Object> streamConfig, int numThreads) {
+    public ThreadedStreamBuilder(Queue<StreamsDatum> queue, Map<String, Object> streamConfig) {
 
         this.queue = queue;
         this.providers = new LinkedHashMap<String, StreamComponent>();
         this.components = new LinkedHashMap<String, StreamComponent>();
         this.streamConfig = streamConfig;
 
-        this.threadingController = new ThreadingController(numThreads);
+        this.threadingController = ThreadingController.getInstance();
     }
 
     @Override
@@ -233,11 +228,6 @@ public class ThreadedStreamBuilder implements StreamBuilder {
                 condition.await();
             }
 
-            while(this.threadingController.isRunning())
-                this.threadingController.getLock().await();
-
-            this.threadingController.shutDown();
-
             this.executor.shutdown();
             this.executor.awaitTermination(30, TimeUnit.MINUTES);
 
@@ -287,8 +277,6 @@ public class ThreadedStreamBuilder implements StreamBuilder {
     private void shutdownExecutor() {
         // make sure that
         try {
-            this.threadingController.shutDown();
-
             if (!this.executor.isShutdown()) {
                 // tell the executor to shutdown.
                 this.executor.shutdown();

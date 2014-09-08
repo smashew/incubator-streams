@@ -17,13 +17,16 @@
  */
 package org.apache.streams.builders.threaded;
 
-import org.apache.streams.core.*;
+import org.apache.streams.core.StreamsDatum;
+import org.apache.streams.core.StreamsProvider;
+import org.apache.streams.core.StreamsResultSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 
 public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
@@ -32,6 +35,7 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
 
     private StreamsProvider provider;
     private final Type type;
+    private final AtomicInteger outStanding = new AtomicInteger(0);
     private final AtomicBoolean keepRunning = new AtomicBoolean(true);
     private final Condition lock = new SimpleCondition();
     private final ThreadingController threadingController;
@@ -57,7 +61,7 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
     }
 
     public boolean isRunning() {
-        return this.keepRunning.get();
+        return this.keepRunning.get() || this.outStanding.get() > 0;
     }
 
     public Condition getLock() {
@@ -114,9 +118,8 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
             LOGGER.error("The stream will continue running, but not with this provider.");
             LOGGER.error("Exception: {}", e);
         } finally {
-            this.provider.cleanUp();
             this.keepRunning.set(false);
-            this.lock.signalAll();
+            checkLockSignal();
         }
     }
 
@@ -147,12 +150,35 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
     }
 
     private void workMe(final StreamsDatum datum) {
+
+        outStanding.incrementAndGet();
+
         this.threadingController.execute(new Runnable() {
             @Override
             public void run() {
                 sendToChildren(datum);
             }
+        }, new ThreadingControllerCallback() {
+
+            @Override
+            public void onSuccess(Object o) {
+                outStanding.decrementAndGet();
+                checkLockSignal();
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                outStanding.decrementAndGet();
+                checkLockSignal();
+            }
         });
+    }
+
+    private void checkLockSignal() {
+        if(this.outStanding.get() == 0 && !this.keepRunning.get()) {
+            this.provider.cleanUp();
+            this.lock.signalAll();
+        }
     }
 
     @Override

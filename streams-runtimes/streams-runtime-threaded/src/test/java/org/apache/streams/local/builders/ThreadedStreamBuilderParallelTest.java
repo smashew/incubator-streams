@@ -17,9 +17,9 @@
  */
 package org.apache.streams.local.builders;
 
+import org.apache.streams.builders.threaded.ThreadedStreamBuilder;
 import org.apache.streams.core.StreamBuilder;
 import org.apache.streams.core.StreamsDatum;
-import org.apache.streams.builders.threaded.ThreadedStreamBuilder;
 import org.apache.streams.local.test.processors.PassThroughStaticCounterProcessor;
 import org.apache.streams.local.test.providers.NumericMessageProvider;
 import org.apache.streams.local.test.providers.NumericMessageProviderDelayed;
@@ -57,7 +57,7 @@ public class ThreadedStreamBuilderParallelTest {
     @Test
     public void testParallelProcessorSingleThread() {
         int numDatums = 20;
-        StreamBuilder builder = new ThreadedStreamBuilder(new ArrayBlockingQueue<StreamsDatum>(1), 1);
+        StreamBuilder builder = new ThreadedStreamBuilder(new ArrayBlockingQueue<StreamsDatum>(1));
         PassThroughStaticCounterProcessor proc1 = new PassThroughStaticCounterProcessor();
         PassThroughStaticCounterProcessor proc2 = new PassThroughStaticCounterProcessor();
         PassThroughStaticCounterProcessor proc3 = new PassThroughStaticCounterProcessor();
