@@ -29,8 +29,11 @@ public class ThreadingController {
     private final AtomicLong numberOfObservations = new AtomicLong(0);
     private final AtomicDouble sumOfObservations = new AtomicDouble(0);
 
+    private volatile double lastCPUObservation = 0.0;
+
     private static final long SCALE_CHECK = 1000;
-    private Double scaleThreashold = .7;
+    private Double scaleThreshold = .8;
+    private ThreadingControllerCPUObserver threadingControllerCPUObserver = new DefaultThreadingControllerCPUObserver();
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
     public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
@@ -39,27 +42,86 @@ public class ThreadingController {
         return INSTANCE;
     }
 
-    public Integer getNumThreads() {
-        return this.numThreads.get();
+    /**
+     * The current number of threads in the core pool
+     * @return
+     * Integer representing the number of threads in the core pool.
+     */
+    public Integer getNumThreads()              { return this.numThreads.get(); }
+
+    /**
+     * The time interval that is being used to determine how often to scale our threads.
+     * @return
+     * long in millis
+     */
+    public Long getScaleCheck()                 { return SCALE_CHECK; }
+
+    /**
+     * Whether or not the thread-pool is running or if all the threads are currently asleep.
+     * @return
+     * A boolean representing whether or not the thread-pool is running.
+     */
+    public boolean isRunning()                  { return this.workingNow.get() > 0; }
+
+    /**
+     * The current CPU load measured for by the observer
+     * @return
+     * Double representing the current CPU load
+     */
+    public Double getProcessCpuLoad()           { return this.threadingControllerCPUObserver.getCPUPercentUtilization(); }
+
+    /**
+     * The last CPU usage that was used to calculate whether or not the thread pool should be adjusted
+     * @return
+     * Double representing that observation's CPU load
+     */
+    public Double getLastCPUObservation()       { return this.lastCPUObservation; }
+
+    /**
+     * The class that is being used to provide the CPU load
+     * @return
+     * The canonical class name that is calculating the CPU usage.
+     */
+    public String getProcessCpuLoadClass()      { return this.threadingControllerCPUObserver.getClass().getCanonicalName(); }
+
+    public void setThreadingControllerCPUObserver(ThreadingControllerCPUObserver threadingControllerCPUObserver) {
+        this.threadingControllerCPUObserver = threadingControllerCPUObserver;
     }
 
+    /**
+     * A double representing when the thread-pool will be adjusted if > 10% of the value.
+     * Or decreased if the pool is under utilized by 10% of the value.
+     * @return
+     * Double representing the threshold CPU usage value (percent)
+     */
+    public Double getScaleThreshold() {
+        return scaleThreshold;
+    }
 
-    private double getProcessCpuLoad()  {
+    private static class DefaultThreadingControllerCPUObserver implements ThreadingControllerCPUObserver {
 
-        try {
-            MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-            ObjectName name = ObjectName.getInstance("java.lang:type=OperatingSystem");
-            AttributeList list = mbs.getAttributes(name, new String[]{"ProcessCpuLoad"});
+        private static final Double FALL_BACK = 0.7;
 
-            if (list.isEmpty()) return Double.NaN;
+        @Override
+        public double getCPUPercentUtilization() {
+            try {
+                MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+                ObjectName name = ObjectName.getInstance("java.lang:type=OperatingSystem");
 
-            Attribute att = (Attribute) list.get(0);
-            Double value = (Double) att.getValue();
+                AttributeList list = mbs.getAttributes(name, new String[]{"ProcessCpuLoad"});
 
-            return value <= -1.0 ? this.scaleThreashold : (value / NUM_PROCESSORS.doubleValue());
-        }
-        catch(Throwable t) {
-            return this.scaleThreashold;
+                if (list.isEmpty()) return Double.NaN;
+
+                Attribute att = (Attribute) list.get(0);
+                Double value = (Double) att.getValue();
+
+                Double load = ((int)(value * 1000) / 10.0);
+
+                return load > 0 && load < 1.0 ? load : FALL_BACK;
+            }
+            catch(Throwable t) {
+                return FALL_BACK;
+            }
         }
     }
 
@@ -98,19 +160,24 @@ public class ThreadingController {
             if((new Date().getTime() > (SCALE_CHECK + this.lastWorked.get())) && this.numberOfObservations.incrementAndGet() > 5) {
 
                 double average = this.sumOfObservations.doubleValue() / this.numberOfObservations.doubleValue();
+                this.lastCPUObservation = average;
 
                 /* re-size the shared thread-pool if we aren't under significant stress */
                 int currentThreadCount = this.numThreads.get();
                 int newThreadCount = this.numThreads.get();
 
                 /* Adjust to keep the processor between 72% & 88% */
-                if (average < this.scaleThreashold * .9) {
+                if (average < this.scaleThreshold * .9) {
                     /* The processor isn't being worked that hard, we can add the unit here */
                     newThreadCount = Math.min(NUM_PROCESSORS * 3, (newThreadCount + 1));
-                    LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
-                } else if (average > this.scaleThreashold * 1.1) {
-                    newThreadCount = Math.max((newThreadCount - 1), 1);
-                    LOGGER.info("------- SCALING DOWN THREAD POOL TO {} THREADS (CPU @ {}) --------", newThreadCount, average);
+                    if(newThreadCount != currentThreadCount) {
+                        LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
+                    }
+                } else if (average > this.scaleThreshold * 1.1) {
+                    newThreadCount = Math.max((newThreadCount - 1), NUM_PROCESSORS);
+                    if(newThreadCount != currentThreadCount) {
+                        LOGGER.info("------- SCALING DOWN THREAD POOL TO {} THREADS (CPU @ {}) --------", newThreadCount, average);
+                    }
                 }
 
                 this.numThreads.set(newThreadCount);
@@ -125,6 +192,7 @@ public class ThreadingController {
                 }
 
                 if(newThreadCount != currentThreadCount) {
+
                     this.threadPoolExecutor.setCorePoolSize(this.numThreads.get());
                     this.threadPoolExecutor.setMaximumPoolSize(this.numThreads.get());
                 }
