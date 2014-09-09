@@ -47,7 +47,7 @@ public class StreamsPersistWriterTask extends BaseStreamsTask {
     }
 
     @Override
-    public void cleanup() {
+    public void cleanUpMyself() {
         this.writer.cleanUp();
     }
 }

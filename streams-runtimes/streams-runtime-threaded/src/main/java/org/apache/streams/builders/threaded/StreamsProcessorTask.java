@@ -44,7 +44,8 @@ public class StreamsProcessorTask extends BaseStreamsTask {
     }
 
     @Override
-    public void cleanup() {
+    public void cleanUpMyself() {
         this.processor.cleanUp();
     }
+
 }

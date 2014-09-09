@@ -42,8 +42,8 @@ public class ComponentUtils {
         int waitTime = 1;
         while(!queue.offer(entry)) {
             safeQuickRest(waitTime);
-            waitTime = ((waitTime * 2) > 50) ? (waitTime * 2) : waitTime;
-            waitTime = Math.min(waitTime, 50);
+            waitTime = ((waitTime * 2) > 10) ? (waitTime * 2) : waitTime;
+            waitTime = Math.min(waitTime, 10);
         }
     }
 

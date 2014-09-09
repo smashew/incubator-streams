@@ -23,8 +23,7 @@ import org.apache.streams.core.StreamsResultSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -140,13 +139,21 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
             }
         }
         catch(Throwable e) {
+            e.printStackTrace();
             LOGGER.warn("Unknown problem reading the queue, no datums affected: {}", e.getMessage());
         }
     }
 
     @Override
-    public void cleanup() {
+    public void cleanUpMyself() {
         this.provider.cleanUp();
+    }
+
+    private final Set<String> alreadyCleanedUp = new HashSet<String>();
+
+    private void cleanupTask(StreamsTask t) {
+
+        alreadyCleanedUp.add(this.getId());
     }
 
     private void workMe(final StreamsDatum datum) {

@@ -46,6 +46,8 @@ public abstract class BaseStreamsTask implements StreamsTask {
     protected final DatumStatusCounter statusCounter = new DatumStatusCounter();
     private final AtomicLong workingCounter = new AtomicLong(0);
 
+    private boolean isCleanedUp = false;
+
     BaseStreamsTask(String id, Map<String, Object> config) {
         this.id = id;
         this.config = config;
@@ -74,6 +76,23 @@ public abstract class BaseStreamsTask implements StreamsTask {
     public String toString() {
         return this.getClass().getName() + "[" + this.getId() + "]: " + this.getCurrentStatus().toString();
     }
+
+    @Override
+    public final void cleanup() {
+        try {
+            if(!isCleanedUp)
+                cleanUpMyself();
+        }
+        catch(Throwable e) {
+            LOGGER.warn("Problem Cleaning Up Component[{}]: {}", this.getId(), e.getMessage());
+        }
+        this.isCleanedUp = true;
+
+        for(StreamsTask t : this.downStreamTasks)
+            t.cleanup();
+    }
+
+    protected abstract void cleanUpMyself();
 
     @Override
     public final void process(StreamsDatum datum) {

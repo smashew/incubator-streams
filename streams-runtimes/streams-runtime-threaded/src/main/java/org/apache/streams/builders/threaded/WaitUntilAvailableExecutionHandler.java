@@ -30,14 +30,16 @@ public class WaitUntilAvailableExecutionHandler implements RejectedExecutionHand
 
     }
 
-    public synchronized void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-        // Wait until the pool is free for another item
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
 
-        if (executor.getMaximumPoolSize() == executor.getQueue().size()) {
-            while (executor.getMaximumPoolSize() == executor.getQueue().size())
-                safeSleep();
+        // Wait until the pool is free for another item
+        synchronized(this) {
+            if (executor.getMaximumPoolSize() == executor.getQueue().size()) {
+                while (executor.getMaximumPoolSize() == executor.getQueue().size())
+                    safeSleep();
+            }
+            executor.submit(r);
         }
-        executor.submit(r);
     }
 
     public void safeSleep() {
