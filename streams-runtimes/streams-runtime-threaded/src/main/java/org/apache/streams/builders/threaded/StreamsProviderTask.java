@@ -183,7 +183,6 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
 
     private void checkLockSignal() {
         if(this.outStanding.get() == 0 && !this.keepRunning.get()) {
-            this.provider.cleanUp();
             this.lock.signalAll();
         }
     }

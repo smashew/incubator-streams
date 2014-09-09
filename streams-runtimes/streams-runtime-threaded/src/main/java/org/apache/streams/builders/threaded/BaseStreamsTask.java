@@ -87,9 +87,6 @@ public abstract class BaseStreamsTask implements StreamsTask {
             LOGGER.warn("Problem Cleaning Up Component[{}]: {}", this.getId(), e.getMessage());
         }
         this.isCleanedUp = true;
-
-        for(StreamsTask t : this.downStreamTasks)
-            t.cleanup();
     }
 
     protected abstract void cleanUpMyself();

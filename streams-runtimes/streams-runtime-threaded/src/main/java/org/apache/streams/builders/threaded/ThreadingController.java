@@ -30,7 +30,7 @@ public class ThreadingController {
     private final AtomicDouble sumOfObservations = new AtomicDouble(0);
 
     private static final long SCALE_CHECK = 1000;
-    private Double scaleThreashold = .8;
+    private Double scaleThreashold = .7;
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
     public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
@@ -107,10 +107,10 @@ public class ThreadingController {
                 if (average < this.scaleThreashold * .9) {
                     /* The processor isn't being worked that hard, we can add the unit here */
                     newThreadCount = Math.min(NUM_PROCESSORS * 3, (newThreadCount + 1));
-                    LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS ++++++++", newThreadCount);
+                    LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
                 } else if (average > this.scaleThreashold * 1.1) {
                     newThreadCount = Math.max((newThreadCount - 1), 1);
-                    LOGGER.info("------- SCALING DOWN THREAD POOL TO {} THREADS --------", newThreadCount);
+                    LOGGER.info("------- SCALING DOWN THREAD POOL TO {} THREADS (CPU @ {}) --------", newThreadCount, average);
                 }
 
                 this.numThreads.set(newThreadCount);
