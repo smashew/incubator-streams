@@ -36,6 +36,7 @@ public class ThreadingController {
     private ThreadingControllerCPUObserver threadingControllerCPUObserver = new DefaultThreadingControllerCPUObserver();
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
+    private static final Integer MAX_THREADS_ALLOWED = Math.max(12, NUM_PROCESSORS * 5);
     public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
 
     public static ThreadingController getInstance() {
@@ -169,7 +170,7 @@ public class ThreadingController {
                 /* Adjust to keep the processor between 72% & 88% */
                 if (average < this.scaleThreshold * .9) {
                     /* The processor isn't being worked that hard, we can add the unit here */
-                    newThreadCount = Math.min(NUM_PROCESSORS * 3, (newThreadCount + 1));
+                    newThreadCount = Math.min(MAX_THREADS_ALLOWED, (newThreadCount + 1));
                     if(newThreadCount != currentThreadCount) {
                         LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
                     }
