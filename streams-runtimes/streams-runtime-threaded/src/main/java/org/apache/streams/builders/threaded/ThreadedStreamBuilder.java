@@ -111,6 +111,11 @@ public class ThreadedStreamBuilder implements StreamBuilder {
         return this;
     }
 
+    public ThreadedStreamBuilder addStreamsProcessor(String id, StreamsProcessor processor, String... inBoundIds) {
+        addStreamsProcessor(id, processor, 1, inBoundIds);
+        return this;
+    }
+
     @Override
     public ThreadedStreamBuilder addStreamsProcessor(String id, StreamsProcessor processor, int numTasks, String... inBoundIds) {
         validateId(id);
