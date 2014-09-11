@@ -45,6 +45,8 @@ public abstract class BaseStreamsTask implements StreamsTask {
     protected final Set<StreamsTask> downStreamTasks = new HashSet<StreamsTask>();
     protected final DatumStatusCounter statusCounter = new DatumStatusCounter();
     private final AtomicLong workingCounter = new AtomicLong(0);
+    private final AtomicLong timeSpentSuccess = new AtomicLong(0);
+    private final AtomicLong timeSpentFailure = new AtomicLong(0);
 
     private boolean isCleanedUp = false;
 
@@ -60,7 +62,7 @@ public abstract class BaseStreamsTask implements StreamsTask {
 
     @Override
     public final StatusCounts getCurrentStatus() {
-        return new StatusCounts(0,this.workingCounter.get(), this.statusCounter.getSuccess(), this.statusCounter.getFail());
+        return new StatusCounts(this.workingCounter.get(), this.statusCounter.getSuccess(), this.statusCounter.getFail(), this.timeSpentSuccess.get(), this.timeSpentFailure.get());
     }
 
     @Override
@@ -107,14 +109,18 @@ public abstract class BaseStreamsTask implements StreamsTask {
     }
 
     private Collection<StreamsDatum> fetch(StreamsDatum datum) {
+        // start a timer to find out how long this process takes.
+        long startTime = new Date().getTime();
         Collection<StreamsDatum> toReturn = null;
         this.workingCounter.incrementAndGet();
         try {
             toReturn = this.processInternal(cloneStreamsDatum(datum));
-            statusCounter.incrementStatus(DatumStatus.SUCCESS);
+            this.statusCounter.incrementStatus(DatumStatus.SUCCESS);
+            this.timeSpentSuccess.addAndGet(new Date().getTime() - startTime);
         }
         catch(Throwable e) {
-            statusCounter.incrementStatus(DatumStatus.FAIL);
+            this.statusCounter.incrementStatus(DatumStatus.FAIL);
+            this.timeSpentFailure.addAndGet(new Date().getTime() - startTime);
         }
         finally  {
             this.workingCounter.decrementAndGet();

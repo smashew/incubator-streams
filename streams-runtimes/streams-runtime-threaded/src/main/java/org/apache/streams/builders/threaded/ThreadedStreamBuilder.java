@@ -219,14 +219,10 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
             timer.schedule(updateTask, 0, 1500);
 
-            LOGGER.debug("----------------------------------- Starting LocalStream Builder -----------------------------------");
-
             // Starting all the tasks
             for(StreamsTask task : this.tasks.values())
                 if(task instanceof Runnable)
                     this.executor.execute((Runnable)task);
-
-            LOGGER.debug("----------------------------------- Waiting for everything to be completed -----------------------------------");
 
             Condition condition = null;
             while((condition = getOffendingLock()) != null) {
@@ -236,18 +232,13 @@ public class ThreadedStreamBuilder implements StreamBuilder {
             this.executor.shutdown();
             this.executor.awaitTermination(30, TimeUnit.MINUTES);
 
-            LOGGER.debug("----------------------------------- Everything is completed -----------------------------------");
-
             for(StreamsTask t : this.tasks.values())
                 t.cleanup();
 
-            LOGGER.debug("----------------------------------- Everything is cleaned up -----------------------------------");
-
-
             for(final String k : tasks.keySet()) {
                 final StatusCounts counts = tasks.get(k).getCurrentStatus();
-                LOGGER.info("Finishing: {} - Queue[{}] Working[{}] Success[{}] Failed[{}] ", k,
-                        counts.getQueue(), counts.getWorking(), counts.getSuccess(), counts.getFailed());
+                LOGGER.debug("Finishing: {} - Working[{}] Success[{}] Failed[{}] TimeSpent[{}]", k,
+                        counts.getWorking(), counts.getSuccess(), counts.getFailed(), counts.getAverageTimeSpent());
             }
 
 

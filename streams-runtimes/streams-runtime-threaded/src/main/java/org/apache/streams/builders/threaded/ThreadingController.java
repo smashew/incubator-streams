@@ -158,7 +158,7 @@ public class ThreadingController {
             this.numberOfObservations.incrementAndGet();
             this.sumOfObservations.addAndGet(this.getProcessCpuLoad());
 
-            if((new Date().getTime() > (SCALE_CHECK + this.lastWorked.get())) && this.numberOfObservations.incrementAndGet() > 5) {
+            if((new Date().getTime() > (SCALE_CHECK + this.lastWorked.get())) && this.numberOfObservations.incrementAndGet() > 3) {
 
                 double average = this.sumOfObservations.doubleValue() / this.numberOfObservations.doubleValue();
                 this.lastCPUObservation = average;
