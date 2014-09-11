@@ -17,6 +17,7 @@
  */
 package org.apache.streams.local.builders;
 
+import org.apache.streams.builders.threaded.StreamsGraphElement;
 import org.apache.streams.core.StreamBuilder;
 import org.apache.streams.builders.threaded.ThreadedStreamBuilder;
 import org.apache.streams.local.test.processors.PassThroughStaticCounterProcessor;
@@ -37,7 +38,7 @@ public class ThreadedStreamBuilderDelayTest {
     public void delayedWriterTest() {
 
         int numDatums = 5;
-        StreamBuilder builder = new ThreadedStreamBuilder();
+        ThreadedStreamBuilder builder = new ThreadedStreamBuilder();
         DatumCounterWriter writer = new DatumCounterWriter(500); // give the DatumCounter a 500ms delay
         SimpleProcessorCounter proc1 = new SimpleProcessorCounter();
         SimpleProcessorCounter proc2 = new SimpleProcessorCounter();

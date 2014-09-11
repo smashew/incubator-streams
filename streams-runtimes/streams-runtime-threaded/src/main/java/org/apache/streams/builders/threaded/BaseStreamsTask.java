@@ -60,6 +60,10 @@ public abstract class BaseStreamsTask implements StreamsTask {
             this.downStreamTasks.add(ctx.get(id));
     }
 
+    public Collection<StreamsTask> getChildren() {
+        return this.downStreamTasks;
+    }
+
     @Override
     public final StatusCounts getCurrentStatus() {
         return new StatusCounts(this.workingCounter.get(), this.statusCounter.getSuccess(), this.statusCounter.getFail(), this.timeSpentSuccess.get(), this.timeSpentFailure.get());

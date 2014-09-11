@@ -19,6 +19,7 @@ package org.apache.streams.builders.threaded;
 
 import org.apache.streams.core.StreamsDatum;
 
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -28,6 +29,8 @@ import java.util.Map;
 public interface StreamsTask {
 
     public StatusCounts getCurrentStatus();
+
+    public Collection<StreamsTask> getChildren();
 
     public String getId();
 

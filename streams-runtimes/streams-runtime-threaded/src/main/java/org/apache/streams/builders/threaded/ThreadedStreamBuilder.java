@@ -39,6 +39,8 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
     private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(ThreadedStreamBuilder.class);
 
+    private final List<StreamsGraphElement> graphElements = new ArrayList<StreamsGraphElement>();
+
     public static final String TIMEOUT_KEY = "TIMEOUT";
     private final Queue<StreamsDatum> queue;
     private final Map<String, StreamComponent> providers;
@@ -63,6 +65,28 @@ public class ThreadedStreamBuilder implements StreamBuilder {
      */
     public ThreadedStreamBuilder(Queue<StreamsDatum> queue) {
         this(queue, null);
+    }
+
+    public List<StreamsGraphElement> getGraphElements() {
+        if(this.graphElements.size() == 0)
+            buildGraphElements();
+        return this.graphElements;
+    }
+
+
+    private void buildGraphElements() {
+        this.graphElements.clear();
+        for(StreamsTask p : this.tasks.values()) {
+            if(p instanceof StreamsProviderTask)
+                appendAndFollow(p, this.graphElements);
+        }
+    }
+
+    private void appendAndFollow(StreamsTask t, List<StreamsGraphElement> elems) {
+        for(StreamsTask c : t.getChildren()) {
+            elems.add(new StreamsGraphElement(t.getId(), c.getId(), 0));
+            appendAndFollow(c, elems);
+        }
     }
 
 
@@ -193,18 +217,27 @@ public class ThreadedStreamBuilder implements StreamBuilder {
         this.executor = Executors.newFixedThreadPool(numProviders);
 
         try {
+
             // if anyone would like to listen in to progress events
             // let them do that
             TimerTask updateTask = new TimerTask() {
                 public void run() {
 
+
+
                     final Map<String, StatusCounts> updateMap = getUpdateCounts();
+
+                    for(String k : updateMap.keySet())
+                        for(StreamsGraphElement g : getGraphElements())
+                            if(g.getTarget().equals(k))
+                                g.setValue((int)updateMap.get(k).getWorking());
+
 
                     if (eventHandlers.size() > 0) {
                         for (final StreamBuilderEventHandler eventHandler : eventHandlers) {
                             try {
                                 try {
-                                    eventHandler.update(updateMap);
+                                    eventHandler.update(updateMap, getGraphElements());
                                 } catch(Throwable e) {
                                     /* */
                                 }
