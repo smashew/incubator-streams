@@ -36,7 +36,7 @@ public class ThreadingController {
     private ThreadingControllerCPUObserver threadingControllerCPUObserver = new DefaultThreadingControllerCPUObserver();
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
-    private static final Integer MAX_THREADS_ALLOWED = Math.max(12, NUM_PROCESSORS * 5);
+    private static final Integer MAX_THREADS_ALLOWED = Math.max(12, NUM_PROCESSORS * 3);
     public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
 
     public static ThreadingController getInstance() {

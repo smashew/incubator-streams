@@ -48,34 +48,6 @@ public class LinkResolver implements Serializable {
 
     private static final int MAX_ALLOWED_REDIRECTS = 30;                // We will only chase the link to it's final destination a max of 30 times.
 
-    // To help canonicalize the URL, these parts are 'known' to be 'ok' to remove
-    private static final Collection<String> URL_TRACKING_TO_REMOVE = new ArrayList<String>() {{
-        /******************************************************************
-         * Google uses parameters in the URL string to track referrers
-         * on their Google Analytics and promotions. These are the
-         * identified URL patterns.
-         *
-         * URL:
-         * https://support.google.com/analytics/answer/1033867?hl=en
-         *****************************************************************/
-
-        // Required. Use utm_source to identify a search engine, newsletter name, or other source.
-        add("([\\?&])utm_source(=)[^&?]*");
-
-        // Required. Use utm_medium to identify a medium such as email or cost-per- click.
-        add("([\\?&])utm_medium(=)[^&?]*");
-
-        // Used for paid search. Use utm_term to note the keywords for this ad.
-        add("([\\?&])utm_term(=)[^&?]*");
-
-        // Used for A/B testing and content-targeted ads. Use utm_content to differentiate ads or links that point to the same
-        add("([\\?&])utm_content(=)[^&?]*");
-
-        // Used for keyword analysis. Use utm_campaign to identify a specific product promotion or strategic campaign.
-        add("([\\?&])utm_campaign(=)[^&?]*");
-    }};
-
-
     // This element holds all the information about all the re-directs that have taken place
     // and the steps and HTTP codes that occurred inside of each step.
     private final LinkDetails linkDetails;
@@ -119,8 +91,8 @@ public class LinkResolver implements Serializable {
                     }
 
                 if (linkDetails.getFinalURL() != null && StringUtils.isNotEmpty(linkDetails.getFinalURL())) {
-                    linkDetails.setFinalURL(cleanURL(linkDetails.getFinalURL()));
-                    linkDetails.setNormalizedURL(normalizeURL(linkDetails.getFinalURL()));
+                    linkDetails.setFinalURL(LinkResolverHelperFunctions.getCanonicalURL(linkDetails.getFinalURL()));
+                    linkDetails.setNormalizedURL(LinkResolverHelperFunctions.getCanonicalURL(linkDetails.getFinalURL()));
                     linkDetails.setUrlParts(tokenizeURL(linkDetails.getNormalizedURL()));
                 }
             }
@@ -401,59 +373,6 @@ public class LinkResolver implements Serializable {
         return toReturn;
     }
 
-    private String cleanURL(String url) {
-        // If they pass us a null URL then we are going to pass that right back to them.
-        if (url == null)
-            return null;
-
-        // remember how big the URL was at the start
-        int startLength = url.length();
-
-        // Iterate through all the known URL parameters of tracking URLs
-        for (String pattern : URL_TRACKING_TO_REMOVE)
-            url = url.replaceAll(pattern, StringUtils.EMPTY);
-
-        // If the URL is smaller than when it came in. Then it had tracking information
-        if (url.length() < startLength)
-            linkDetails.setTracked(Boolean.TRUE);
-
-        // return our url.
-        return url;
-    }
-
-    /**
-     * Removes the protocol, if it exists, from the front and
-     * removes any random encoding characters
-     * Extend this to do other url cleaning/pre-processing
-     *
-     * @param url - The String URL to normalize
-     * @return normalizedUrl - The String URL that has no junk or surprises
-     */
-    public static String normalizeURL(String url) {
-        if(url == null || StringUtils.isEmpty(url))
-            return StringUtils.EMPTY;
-
-        // Decode URL to remove any %20 type stuff
-        String normalizedUrl = url;
-        try {
-            // I've used a URLDecoder that's part of Java here,
-            // but this functionality exists in most modern languages
-            // and is universally called url decoding
-            normalizedUrl = URLDecoder.decode(url, "UTF-8");
-        } catch (UnsupportedEncodingException uee) {
-            System.err.println("Unable to Decode URL. Decoding skipped.");
-            uee.printStackTrace();
-        }
-
-        // Remove the protocol, http:// ftp:// or similar from the front
-        if (normalizedUrl.contains("://"))
-            normalizedUrl = normalizedUrl.split(":/{2}")[1];
-
-        // Room here to do more pre-processing
-
-        return normalizedUrl;
-    }
-
     /**
      * Goal is to get the different parts of the URL path. This can be used
      * in a classifier to help us determine if we are working with
@@ -465,7 +384,6 @@ public class LinkResolver implements Serializable {
      * @return tokens - A String array of all the tokens
      */
     public static List<String> tokenizeURL(String url) {
-        url = normalizeURL(url);
         // I assume that we're going to use the whole URL to find tokens in
         // If you want to just look in the GET parameters, or you want to ignore the domain
         // or you want to use the domain as a token itself, that would have to be
@@ -494,6 +412,5 @@ public class LinkResolver implements Serializable {
         // alphanumeric but only 1 or 2 characters long
         //String[] tokens = url.split("(?:[\\W_]+\\w{1,2})*[\\W_]+");
     }
-
 
 }
