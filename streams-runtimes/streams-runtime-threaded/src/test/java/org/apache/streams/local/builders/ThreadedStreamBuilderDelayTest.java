@@ -28,6 +28,7 @@ import org.apache.streams.local.test.writer.DatumCounterWriter;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * These tests ensure that StreamsBuilder works
@@ -49,6 +50,11 @@ public class ThreadedStreamBuilderDelayTest {
                 .addStreamsPersistWriter("w1", writer, 1, "proc1", "proc2");
 
         builder.start();
+
+        assertTrue(builder.getUpdateCounts().get("prov1").getType().equals("provider"));
+        assertTrue(builder.getUpdateCounts().get("proc1").getType().equals("processor"));
+        assertTrue(builder.getUpdateCounts().get("proc2").getType().equals("processor"));
+        assertTrue(builder.getUpdateCounts().get("w1").getType().equals("writer"));
 
         assertEquals("Number in should equal number out", numDatums, proc1.getMessageCount());
         assertEquals("Number in should equal number out", numDatums, proc2.getMessageCount());

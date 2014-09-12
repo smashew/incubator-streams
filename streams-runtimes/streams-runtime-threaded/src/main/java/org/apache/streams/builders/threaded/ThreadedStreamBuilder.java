@@ -88,7 +88,7 @@ public class ThreadedStreamBuilder implements StreamBuilder {
             String type;
             if(t.getClass().equals(StreamsProviderTask.class))
                 type = "provider";
-            else if(t.getClass().equals(StreamsProviderTask.class))
+            else if(t.getClass().equals(StreamsProcessorTask.class))
                 type = "processor";
             else if(t.getClass().equals(StreamsPersistWriterTask.class))
                 type = "writer";
@@ -233,8 +233,6 @@ public class ThreadedStreamBuilder implements StreamBuilder {
             // let them do that
             TimerTask updateTask = new TimerTask() {
                 public void run() {
-
-
 
                     final Map<String, StatusCounts> updateMap = getUpdateCounts();
 

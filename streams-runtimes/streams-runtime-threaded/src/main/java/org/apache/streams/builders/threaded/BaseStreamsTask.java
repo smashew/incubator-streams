@@ -40,6 +40,7 @@ public abstract class BaseStreamsTask implements StreamsTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(BaseStreamsTask.class);
 
     private final String id;
+    private String type;
     protected final Map<String, Object> config;
     private final Set<String> downStreamIds = new HashSet<String>();
     protected final Set<StreamsTask> downStreamTasks = new HashSet<StreamsTask>();
@@ -53,6 +54,15 @@ public abstract class BaseStreamsTask implements StreamsTask {
     BaseStreamsTask(String id, Map<String, Object> config) {
         this.id = id;
         this.config = config;
+        if(this.getClass().equals(StreamsProviderTask.class))
+            this.type = "provider";
+        else if(this.getClass().equals(StreamsProcessorTask.class))
+            this.type = "processor";
+        else if(this.getClass().equals(StreamsPersistWriterTask.class))
+            this.type = "writer";
+        else
+            this.type = "unknown";
+
     }
 
     public void initialize(final Map<String, StreamsTask> ctx) {
@@ -66,7 +76,7 @@ public abstract class BaseStreamsTask implements StreamsTask {
 
     @Override
     public final StatusCounts getCurrentStatus() {
-        return new StatusCounts(this.workingCounter.get(), this.statusCounter.getSuccess(), this.statusCounter.getFail(), this.timeSpentSuccess.get(), this.timeSpentFailure.get());
+        return new StatusCounts(this.id, this.type, this.workingCounter.get(), this.statusCounter.getSuccess(), this.statusCounter.getFail(), this.timeSpentSuccess.get(), this.timeSpentFailure.get());
     }
 
     @Override

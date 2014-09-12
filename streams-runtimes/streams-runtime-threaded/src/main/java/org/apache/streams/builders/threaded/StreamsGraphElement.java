@@ -10,6 +10,7 @@ public class StreamsGraphElement {
     StreamsGraphElement(String source, String target, String type, int value) {
         this.source = source;
         this.target = target;
+        this.type = type;
         this.value = value;
     }
 

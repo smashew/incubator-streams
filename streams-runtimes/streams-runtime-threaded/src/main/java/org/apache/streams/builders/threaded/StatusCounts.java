@@ -24,23 +24,29 @@ import java.io.Serializable;
 
 public class StatusCounts implements Serializable {
 
+    private String id;
+    private String type;
     private long working;
     private long success;
     private long failed;
     private long timeSpentSuccess;
     private long timeSpentFailure;
 
-    public long getWorking()            { return this.working; }
-    public long getSuccess()            { return this.success; }
-    public long getFailed()             { return this.failed; }
-    public long getTimeSpentSuccess()   { return this.timeSpentSuccess; }
-    public long getTimeSpentFailure()   { return this.timeSpentFailure; }
+    public String getId()                   { return id; }
+    public String getType()                 { return type; }
+    public long getWorking()                { return this.working; }
+    public long getSuccess()                { return this.success; }
+    public long getFailed()                 { return this.failed; }
+    public long getTimeSpentSuccess()       { return this.timeSpentSuccess; }
+    public long getTimeSpentFailure()       { return this.timeSpentFailure; }
 
     public double getAverageSuccessTime()   { return this.success == 0 ? 0 : (double)this.timeSpentSuccess / (double)this.success; }
     public double getAverageFailureTime()   { return this.failed == 0 ? 0 : (double)this.timeSpentFailure / (double)this.failed; }
     public double getAverageTimeSpent()     { return (this.success + this.failed == 0) ? 0 : ((double)this.timeSpentSuccess + (double)this.timeSpentFailure) / ((double)this.success + (double)this.failed); }
 
-    StatusCounts(long working, long success, long failed, long timeSpentSuccess, long timeSpentFailure) {
+    StatusCounts(String id, String type, long working, long success, long failed, long timeSpentSuccess, long timeSpentFailure) {
+        this.id = id;
+        this.type = type;
         this.working = working;
         this.success = success;
         this.failed = failed;
@@ -55,5 +61,6 @@ public class StatusCounts implements Serializable {
             return this.working + " " + this.success + " " + this.failed + " " + this.timeSpentSuccess + " " ;
         }
     }
+
 
 }
