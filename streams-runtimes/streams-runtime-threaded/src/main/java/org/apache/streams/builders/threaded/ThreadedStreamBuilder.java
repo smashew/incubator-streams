@@ -84,7 +84,18 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
     private void appendAndFollow(StreamsTask t, List<StreamsGraphElement> elems) {
         for(StreamsTask c : t.getChildren()) {
-            elems.add(new StreamsGraphElement(t.getId(), c.getId(), 0));
+
+            String type;
+            if(t.getClass().equals(StreamsProviderTask.class))
+                type = "provider";
+            else if(t.getClass().equals(StreamsProviderTask.class))
+                type = "processor";
+            else if(t.getClass().equals(StreamsPersistWriterTask.class))
+                type = "writer";
+            else
+                type = "unknown";
+
+            elems.add(new StreamsGraphElement(t.getId(), c.getId(), type, 0));
             appendAndFollow(c, elems);
         }
     }

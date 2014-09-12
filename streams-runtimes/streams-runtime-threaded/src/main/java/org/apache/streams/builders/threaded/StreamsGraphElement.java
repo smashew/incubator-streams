@@ -4,9 +4,10 @@ public class StreamsGraphElement {
 
     private String source;
     private String target;
+    private String type;
     private int value;
 
-    StreamsGraphElement(String source, String target, int value) {
+    StreamsGraphElement(String source, String target, String type, int value) {
         this.source = source;
         this.target = target;
         this.value = value;
@@ -26,6 +27,14 @@ public class StreamsGraphElement {
 
     void setTarget(String target) {
         this.target = target;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public int getValue() {
