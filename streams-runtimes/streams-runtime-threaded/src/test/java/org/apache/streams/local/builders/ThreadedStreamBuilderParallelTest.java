@@ -53,6 +53,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
 
@@ -78,6 +79,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", proc3.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -97,6 +99,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
 
@@ -117,6 +120,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -136,6 +140,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -155,6 +160,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -174,6 +180,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -195,6 +202,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
 }

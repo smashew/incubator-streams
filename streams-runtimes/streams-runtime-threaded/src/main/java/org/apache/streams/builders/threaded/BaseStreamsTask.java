@@ -49,6 +49,7 @@ public abstract class BaseStreamsTask implements StreamsTask {
     private final AtomicLong timeSpentSuccess = new AtomicLong(0);
     private final AtomicLong timeSpentFailure = new AtomicLong(0);
 
+    private boolean isPrepared = false;
     private boolean isCleanedUp = false;
 
     BaseStreamsTask(String id, Map<String, Object> config) {
@@ -92,6 +93,21 @@ public abstract class BaseStreamsTask implements StreamsTask {
     public String toString() {
         return this.getClass().getName() + "[" + this.getId() + "]: " + this.getCurrentStatus().toString();
     }
+
+    @Override
+    public final void prepare(Object configuration) {
+        try {
+            if(!this.isPrepared)
+                prepareMyself(configuration);
+        }
+        catch(Throwable e) {
+            LOGGER.warn("Problem preparing the component[{}]: {}", this.getId(), e.getMessage());
+        }
+        this.isPrepared = true;
+    }
+
+    protected abstract void prepareMyself(Object configuration);
+
 
     @Override
     public final void cleanup() {

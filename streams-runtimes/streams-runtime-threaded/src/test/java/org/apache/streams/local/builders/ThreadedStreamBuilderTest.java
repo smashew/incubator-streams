@@ -70,6 +70,7 @@ public class ThreadedStreamBuilderTest {
         }
     }
 
+    @Test
     public void testBasicLinearStream1()  {
         int numDatums = 1;
 
@@ -83,6 +84,7 @@ public class ThreadedStreamBuilderTest {
         builder.start();
         assertEquals("Should have same number", numDatums, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -97,6 +99,7 @@ public class ThreadedStreamBuilderTest {
         builder.start();
         assertEquals("Should have same number", numDatums, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -111,6 +114,7 @@ public class ThreadedStreamBuilderTest {
         builder.start();
         assertEquals("Should have same number", numDatums, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
 
@@ -129,6 +133,7 @@ public class ThreadedStreamBuilderTest {
 
         assertEquals("Datums in should match datums out", numDatums, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -161,6 +166,7 @@ public class ThreadedStreamBuilderTest {
         assertEquals("Processor 2 should have processed 100 item", numDatums2, processor2.getMessageCount());
         assertEquals("number in should equal number out", numDatums1 + numDatums2, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -177,6 +183,7 @@ public class ThreadedStreamBuilderTest {
 
         assertEquals("Number in should equal number out", numDatums * 2, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
     @Test
@@ -193,6 +200,7 @@ public class ThreadedStreamBuilderTest {
 
         assertEquals("Number in should equal number out", numDatums * 2, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
 

@@ -41,6 +41,7 @@ public class ThreadedStreamBuilderDatumTest {
         assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
 
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
 
@@ -65,6 +66,8 @@ public class ThreadedStreamBuilderDatumTest {
         assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
 
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
+
     }
 
     @Ignore
@@ -88,6 +91,7 @@ public class ThreadedStreamBuilderDatumTest {
         assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
 
         assertTrue("cleanup called", writer.wasCleanupCalled());
+        assertTrue("cleanup called", writer.wasPrepeareCalled());
 
     }
 

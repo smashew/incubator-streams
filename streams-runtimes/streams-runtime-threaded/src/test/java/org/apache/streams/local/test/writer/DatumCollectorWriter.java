@@ -10,8 +10,10 @@ public class DatumCollectorWriter implements StreamsPersistWriter {
 
     private final List<StreamsDatum> datums = new ArrayList<StreamsDatum>();
     private boolean cleanupCalled = false;
+    private boolean prepareCalled = false;
 
     public boolean wasCleanupCalled() { return this.cleanupCalled; }
+    public boolean wasPrepeareCalled() { return this.prepareCalled; }
 
     public List<StreamsDatum> getDatums() { return this.datums; }
 
@@ -22,7 +24,7 @@ public class DatumCollectorWriter implements StreamsPersistWriter {
 
     @Override
     public void prepare(Object configurationObject) {
-
+        this.prepareCalled = true;
     }
 
     @Override

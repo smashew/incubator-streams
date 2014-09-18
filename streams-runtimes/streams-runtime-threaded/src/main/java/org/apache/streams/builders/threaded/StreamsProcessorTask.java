@@ -44,6 +44,11 @@ public class StreamsProcessorTask extends BaseStreamsTask {
     }
 
     @Override
+    protected void prepareMyself(Object configuration) {
+        this.processor.prepare(configuration);
+    }
+
+    @Override
     public void cleanUpMyself() {
         this.processor.cleanUp();
     }

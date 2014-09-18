@@ -47,6 +47,11 @@ public class StreamsPersistWriterTask extends BaseStreamsTask {
     }
 
     @Override
+    protected void prepareMyself(Object configuration) {
+        this.writer.prepare(configuration);
+    }
+
+    @Override
     public void cleanUpMyself() {
         this.writer.cleanUp();
     }

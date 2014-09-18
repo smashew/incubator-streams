@@ -40,5 +40,7 @@ public interface StreamsTask {
 
     public void addOutputQueue(String id);
 
+    public void prepare(Object configuration);
+
     public void cleanup();
 }

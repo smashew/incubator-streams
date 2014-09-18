@@ -266,6 +266,15 @@ public class ThreadedStreamBuilder implements StreamBuilder {
                 if(task instanceof Runnable)
                     this.executor.execute((Runnable)task);
 
+            for(StreamsTask t : this.tasks.values())
+                    t.prepare(this.streamConfig);
+
+
+            // Starting all the tasks
+            for(StreamsTask task : this.tasks.values())
+                if(task instanceof Runnable)
+                    this.executor.execute((Runnable)task);
+
             Condition condition = null;
             while((condition = getOffendingLock()) != null) {
                 condition.await();

@@ -29,13 +29,16 @@ public class DoNothingWriter implements StreamsPersistWriter {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(DoNothingWriter.class);
     private boolean cleanupCalled = false;
+    private boolean prepareCalled = false;
 
     public boolean wasCleanupCalled() { return this.cleanupCalled; }
+    public boolean wasPrepeareCalled() { return this.prepareCalled; }
 
     public void write(StreamsDatum entry) {
     }
 
     public void prepare(Object configurationObject) {
+        this.prepareCalled = true;
     }
 
     public void cleanUp() {

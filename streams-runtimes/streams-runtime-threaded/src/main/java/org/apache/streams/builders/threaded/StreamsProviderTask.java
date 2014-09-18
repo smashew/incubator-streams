@@ -72,7 +72,6 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
 
         try {
             // TODO allow for configuration objects
-            this.provider.prepare(this.config);
             StreamsResultSet resultSet = null;
             switch (this.type) {
                 case PERPETUAL:
@@ -142,6 +141,11 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
             e.printStackTrace();
             LOGGER.warn("Unknown problem reading the queue, no datums affected: {}", e.getMessage());
         }
+    }
+
+    @Override
+    protected void prepareMyself(Object configuration) {
+        this.provider.prepare(configuration);
     }
 
     @Override
