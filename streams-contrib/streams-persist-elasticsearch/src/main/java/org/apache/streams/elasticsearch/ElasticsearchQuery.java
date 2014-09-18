@@ -204,11 +204,11 @@ public class ElasticsearchQuery implements Iterable<SearchHit>, Iterator<SearchH
     }
 
     protected boolean isCompleted() {
-        return totalRead >= this.limit && hasRecords();
+        return totalRead >= this.limit || !hasRecords();
     }
 
     protected boolean hasRecords() {
-        return scrollPositionInScroll != -1 && (!(this.totalRead > this.limit));
+        return scrollPositionInScroll != -1;
     }
 
     // copied from elasticsearch

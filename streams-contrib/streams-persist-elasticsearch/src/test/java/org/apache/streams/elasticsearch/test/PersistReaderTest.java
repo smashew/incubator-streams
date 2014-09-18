@@ -64,6 +64,12 @@ public class PersistReaderTest {
 
         assertEquals("Should have 10,000 items (index & type)", count, ElasticSearchHelper.countRecordsInIndex(escm, index, type));
 
+        assertEquals("Writer should report 100 items ok", count, esWriter.getTotalOk());
+        assertEquals("Writer should report 100 items sent", count, esWriter.getTotalSent());
+        assertEquals("Writer should report 0 items fail", 0, esWriter.getTotalFailed());
+        assertEquals("Writer should report 0 items outstanding", 0, esWriter.getTotalOutstanding());
+
+
         // Create the builder then execute
         StreamBuilder builderRead = new ThreadedStreamBuilder(new LinkedBlockingQueue<StreamsDatum>(75));
         ElasticsearchReaderConfiguration configRead = ElasticSearchHelper.createReadConfiguration(clusterName,
