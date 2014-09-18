@@ -35,6 +35,8 @@ public class NumericMessageProvider implements StreamsProvider {
     protected int startNumber = 0;
     protected int numMessages;
 
+    private ResultSet resultSet;
+
     public NumericMessageProvider() {this.numMessages = 0;}
     public NumericMessageProvider(int numMessages) {
         this.numMessages = numMessages;
@@ -50,15 +52,27 @@ public class NumericMessageProvider implements StreamsProvider {
     }
 
     public StreamsResultSet readCurrent() {
-        return new ResultSet();
+        synchronized (NumericMessageProvider.class) {
+            if(this.resultSet == null)
+                this.resultSet = new ResultSet();
+        }
+        return this.resultSet;
     }
 
     public StreamsResultSet readNew(BigInteger sequence) {
-        return new ResultSet();
+        synchronized (NumericMessageProvider.class) {
+            if(this.resultSet == null)
+                this.resultSet = new ResultSet();
+        }
+        return this.resultSet;
     }
 
     public StreamsResultSet readRange(DateTime start, DateTime end) {
-        return new ResultSet();
+        synchronized (NumericMessageProvider.class) {
+            if(this.resultSet == null)
+                this.resultSet = new ResultSet();
+        }
+        return this.resultSet;
     }
 
     public void prepare(Object configurationObject) {

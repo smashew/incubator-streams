@@ -145,26 +145,24 @@ public class ThreadedStreamBuilderTest {
         PassThroughStaticCounterProcessor processor2 = new PassThroughStaticCounterProcessor();
         DatumCounterWriter writer = new DatumCounterWriter();
 
-        String ident_provider_one = "provider_1";
-        String ident_provider_two = "provider_2";
-
-        String ident_processor_one = "processor_1";
-        String ident_processor_two = "processor_2";
-
         String ident_writer = "writer";
 
         StreamBuilder builder = new ThreadedStreamBuilder();
-        builder.newReadCurrentStream(ident_provider_one, new NumericMessageProvider(numDatums1))
-                .newReadCurrentStream(ident_provider_two, new NumericMessageProvider(numDatums2))
-                .addStreamsProcessor(ident_processor_one, processor1, 1, ident_provider_one)
-                .addStreamsProcessor(ident_processor_two, processor2, 1, ident_provider_two)
-                .addStreamsPersistWriter(ident_writer, writer, 1, ident_processor_one, ident_processor_two);
+
+        builder.newReadCurrentStream("provider_1", new NumericMessageProvider(numDatums1))
+                .newReadCurrentStream("provider_2", new NumericMessageProvider(numDatums2))
+
+                .addStreamsProcessor("processor_1", processor1, 1, "provider_1")
+                .addStreamsProcessor("processor_2", processor2, 1, "provider_2")
+
+                .addStreamsPersistWriter(ident_writer, writer, 1, "processor_1", "processor_2");
 
         builder.start();
 
-        assertEquals("Processor 1 should have processed 1 item", numDatums1, processor1.getMessageCount());
-        assertEquals("Processor 2 should have processed 100 item", numDatums2, processor2.getMessageCount());
+        assertEquals("Processor 1 should have processed 1 items", numDatums1, processor1.getMessageCount());
+        assertEquals("Processor 2 should have processed 100 items", numDatums2, processor2.getMessageCount());
         assertEquals("number in should equal number out", numDatums1 + numDatums2, writer.getDatumsCounted());
+
         assertTrue("cleanup called", writer.wasCleanupCalled());
         assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
