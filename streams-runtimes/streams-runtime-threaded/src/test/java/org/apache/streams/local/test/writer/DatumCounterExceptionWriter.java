@@ -25,6 +25,7 @@ public class DatumCounterExceptionWriter extends DatumCounterWriter{
     private final AtomicInteger numErrorsToThrow;
     private final AtomicInteger numErrorsThrown;
 
+
     public DatumCounterExceptionWriter(int numErrorsToThrow) {
         super(0);
 

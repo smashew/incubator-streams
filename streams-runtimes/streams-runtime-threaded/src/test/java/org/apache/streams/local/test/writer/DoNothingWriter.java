@@ -28,6 +28,9 @@ import org.slf4j.LoggerFactory;
 public class DoNothingWriter implements StreamsPersistWriter {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(DoNothingWriter.class);
+    private boolean cleanupCalled = false;
+
+    public boolean wasCleanupCalled() { return this.cleanupCalled; }
 
     public void write(StreamsDatum entry) {
     }
@@ -36,5 +39,6 @@ public class DoNothingWriter implements StreamsPersistWriter {
     }
 
     public void cleanUp() {
+        this.cleanupCalled = true;
     }
 }

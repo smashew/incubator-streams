@@ -59,6 +59,8 @@ public class ThreadedStreamBuilderDelayTest {
         assertEquals("Number in should equal number out", numDatums, proc1.getMessageCount());
         assertEquals("Number in should equal number out", numDatums, proc2.getMessageCount());
         assertEquals("Number in should equal number out", numDatums * 2, writer.getDatumsCounted());
+
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -79,6 +81,8 @@ public class ThreadedStreamBuilderDelayTest {
         assertEquals("Number in should equal number out", numDatums, proc1.getMessageCount());
         assertEquals("Number in should equal number out", numDatums, proc2.getMessageCount());
         assertEquals("Number in should equal number out", numDatums * 2, writer.getDatumsCounted());
+
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
 
@@ -95,6 +99,7 @@ public class ThreadedStreamBuilderDelayTest {
                 .addStreamsPersistWriter("writer1", writer, 1, "proc1");
         builder.start();
         assertEquals("Should have same number", numDatums, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -108,6 +113,7 @@ public class ThreadedStreamBuilderDelayTest {
                 .addStreamsPersistWriter("writer1", writer, 1, "proc1");
         builder.start();
         assertEquals("Should have same number", numDatums, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -129,6 +135,7 @@ public class ThreadedStreamBuilderDelayTest {
         assertEquals("Should have same number", numDatums, writer.getDatumsCounted());
         assertEquals("Should have same number", numDatums, proc1.getMessageCount());
         assertEquals("Should have same number", numDatums, proc2.getMessageCount());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -150,6 +157,7 @@ public class ThreadedStreamBuilderDelayTest {
         assertEquals("Should have same number", 2 * numDatums, writer.getDatumsCounted());
         assertEquals("Should have same number", numDatums, proc1.getMessageCount());
         assertEquals("Should have same number", numDatums, proc2.getMessageCount());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -169,6 +177,7 @@ public class ThreadedStreamBuilderDelayTest {
 
         assertEquals("Should have same number", 2 * numDatums, writer.getDatumsCounted());
         assertEquals("Should have same number", 2 * numDatums, proc1.getMessageCount());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -191,5 +200,6 @@ public class ThreadedStreamBuilderDelayTest {
         assertEquals("Should have same number", 2 * numDatums, writer.getDatumsCounted());
         assertEquals("Should have same number", numDatums, proc1.getMessageCount());
         assertEquals("Should have same number", numDatums, proc2.getMessageCount());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 }

@@ -30,6 +30,9 @@ public class DatumCounterWriter implements StreamsPersistWriter{
 
     protected final AtomicInteger counter = new AtomicInteger(0);
     private final int delayInMilliseconds;
+    private boolean cleanupCalled = false;
+
+    public boolean wasCleanupCalled() { return this.cleanupCalled; }
 
     public DatumCounterWriter() {
         this(0);
@@ -59,7 +62,7 @@ public class DatumCounterWriter implements StreamsPersistWriter{
     }
 
     public void cleanUp() {
-
+        this.cleanupCalled = true;
     }
 
     public int getDatumsCounted() {

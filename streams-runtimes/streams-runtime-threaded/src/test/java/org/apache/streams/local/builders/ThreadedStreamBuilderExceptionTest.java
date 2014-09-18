@@ -28,6 +28,7 @@ import org.apache.streams.local.test.writer.DatumCounterWriter;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by rdouglas on 5/16/14.
@@ -48,6 +49,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", 0, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -64,6 +66,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", 0, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -80,6 +83,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", 0, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     /**
@@ -111,6 +115,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", numDatumsGood - numErrors, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -127,6 +132,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", numDatums - numErrors, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -146,6 +152,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", numDatums - (2 * numErrors), writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -165,6 +172,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", 2 * numDatums - (2 * numErrors), writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -182,6 +190,7 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", numDatums - numErrors, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -199,5 +208,6 @@ public class ThreadedStreamBuilderExceptionTest {
         builder.start();
 
         assertEquals("Should have same number", numDatums - numErrors, writer.getDatumsCounted());
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 }

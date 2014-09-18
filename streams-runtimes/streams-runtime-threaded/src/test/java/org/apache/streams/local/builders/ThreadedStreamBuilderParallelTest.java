@@ -29,6 +29,7 @@ import org.junit.Test;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests the parallel ability of streams
@@ -51,6 +52,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
 
@@ -75,6 +77,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("Correct number of processors created", proc2.getMessageCount(), numDatums);
         assertEquals("Correct number of processors created", proc3.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -93,6 +96,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
 
@@ -112,6 +116,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -130,6 +135,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -148,6 +154,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -166,6 +173,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Test
@@ -186,6 +194,7 @@ public class ThreadedStreamBuilderParallelTest {
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
         assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
 }

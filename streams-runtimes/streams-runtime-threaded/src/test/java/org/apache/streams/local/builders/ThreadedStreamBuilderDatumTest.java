@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ThreadedStreamBuilderDatumTest {
 
@@ -38,6 +39,8 @@ public class ThreadedStreamBuilderDatumTest {
         assertEquals("Datum 1 id is correct", "1", writer.getDatums().get(0).getId());
         assertEquals("Datum 2 id is correct", "2", writer.getDatums().get(1).getId());
         assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
+
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
 
@@ -61,6 +64,7 @@ public class ThreadedStreamBuilderDatumTest {
         assertEquals("Datum 2 id is correct", "2", writer.getDatums().get(1).getId());
         assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
 
+        assertTrue("cleanup called", writer.wasCleanupCalled());
     }
 
     @Ignore
@@ -82,6 +86,8 @@ public class ThreadedStreamBuilderDatumTest {
         assertEquals("Datum 1 id is correct", "1", writer.getDatums().get(0).getId());
         assertEquals("Datum 2 id is correct", "2", writer.getDatums().get(1).getId());
         assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
+
+        assertTrue("cleanup called", writer.wasCleanupCalled());
 
     }
 

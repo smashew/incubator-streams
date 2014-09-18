@@ -9,6 +9,9 @@ import java.util.List;
 public class DatumCollectorWriter implements StreamsPersistWriter {
 
     private final List<StreamsDatum> datums = new ArrayList<StreamsDatum>();
+    private boolean cleanupCalled = false;
+
+    public boolean wasCleanupCalled() { return this.cleanupCalled; }
 
     public List<StreamsDatum> getDatums() { return this.datums; }
 
@@ -24,6 +27,6 @@ public class DatumCollectorWriter implements StreamsPersistWriter {
 
     @Override
     public void cleanUp() {
-
+        this.cleanupCalled = true;
     }
 }
