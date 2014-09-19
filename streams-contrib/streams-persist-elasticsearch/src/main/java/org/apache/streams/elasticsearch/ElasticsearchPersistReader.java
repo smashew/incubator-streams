@@ -31,7 +31,6 @@ public class ElasticsearchPersistReader implements StreamsPersistReader, Seriali
     private ElasticsearchQuery elasticsearchQuery;
     private final ElasticsearchReaderConfiguration config;
     private final ElasticsearchClientManager elasticsearchClientManager;
-    private int threadPoolSize = 10;
 
     public ElasticsearchPersistReader(ElasticsearchReaderConfiguration config) {
         this(config, new ElasticsearchClientManager(config));
