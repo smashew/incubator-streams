@@ -53,7 +53,7 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
     private static final int DEFAULT_SLEEP = 200;
 
     public StreamsProviderTask(String id, Map<String, Object> config, StreamsProvider provider, Type type, ThreadingController threadingController) {
-        super(id, config);
+        super(id, config, provider);
         this.provider = provider;
         this.type = type;
         this.threadingController = threadingController;
@@ -141,16 +141,6 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
             e.printStackTrace();
             LOGGER.warn("Unknown problem reading the queue, no datums affected: {}", e.getMessage());
         }
-    }
-
-    @Override
-    protected void prepareMyself(Object configuration) {
-        this.provider.prepare(configuration);
-    }
-
-    @Override
-    public void cleanUpMyself() {
-        this.provider.cleanUp();
     }
 
     private final Set<String> alreadyCleanedUp = new HashSet<String>();

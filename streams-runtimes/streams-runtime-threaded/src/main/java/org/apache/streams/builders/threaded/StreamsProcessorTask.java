@@ -35,22 +35,11 @@ public class StreamsProcessorTask extends BaseStreamsTask {
     protected final StreamsProcessor processor;
 
     public StreamsProcessorTask(String id, Map<String, Object> config, StreamsProcessor processor) {
-        super(id, config);
+        super(id, config, processor);
         this.processor = processor;
     }
 
     protected Collection<StreamsDatum> processInternal(StreamsDatum datum) {
         return this.processor.process(datum);
     }
-
-    @Override
-    protected void prepareMyself(Object configuration) {
-        this.processor.prepare(configuration);
-    }
-
-    @Override
-    public void cleanUpMyself() {
-        this.processor.cleanUp();
-    }
-
 }

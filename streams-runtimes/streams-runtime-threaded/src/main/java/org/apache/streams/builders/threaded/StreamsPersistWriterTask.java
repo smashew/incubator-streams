@@ -17,6 +17,7 @@
  */
 package org.apache.streams.builders.threaded;
 
+import org.apache.streams.core.DatumStatusCountable;
 import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.core.StreamsPersistWriter;
 import org.slf4j.Logger;
@@ -32,7 +33,7 @@ public class StreamsPersistWriterTask extends BaseStreamsTask {
     protected final StreamsPersistWriter writer;
 
     public StreamsPersistWriterTask(String id, Map<String, Object> config, StreamsPersistWriter writer) {
-        super(id, config);
+        super(id, config, writer);
         this.writer = writer;
     }
 
@@ -44,15 +45,5 @@ public class StreamsPersistWriterTask extends BaseStreamsTask {
     @Override
     public void addOutputQueue(String id) {
         throw new UnsupportedOperationException(this.getClass().getName() + " does not support method - setOutputQueue()");
-    }
-
-    @Override
-    protected void prepareMyself(Object configuration) {
-        this.writer.prepare(configuration);
-    }
-
-    @Override
-    public void cleanUpMyself() {
-        this.writer.cleanUp();
     }
 }

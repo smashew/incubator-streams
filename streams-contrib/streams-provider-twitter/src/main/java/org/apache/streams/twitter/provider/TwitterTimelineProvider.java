@@ -31,7 +31,6 @@ public class TwitterTimelineProvider implements StreamsProvider, Serializable {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(TwitterTimelineProvider.class);
 
-
     private final Object waitLock = new Object();
 
     private TwitterStreamConfiguration config;

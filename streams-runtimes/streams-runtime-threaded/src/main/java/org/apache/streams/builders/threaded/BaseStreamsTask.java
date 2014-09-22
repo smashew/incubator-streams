@@ -22,9 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang.SerializationException;
-import org.apache.streams.core.DatumStatus;
-import org.apache.streams.core.DatumStatusCounter;
-import org.apache.streams.core.StreamsDatum;
+import org.apache.streams.core.*;
 import org.apache.streams.jackson.StreamsJacksonMapper;
 import org.apache.streams.util.SerializationUtil;
 import org.slf4j.Logger;
@@ -39,6 +37,7 @@ public abstract class BaseStreamsTask implements StreamsTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BaseStreamsTask.class);
 
+    private final StreamsOperation streamsOperation;
     private final String id;
     private String type;
     protected final Map<String, Object> config;
@@ -52,9 +51,10 @@ public abstract class BaseStreamsTask implements StreamsTask {
     private boolean isPrepared = false;
     private boolean isCleanedUp = false;
 
-    BaseStreamsTask(String id, Map<String, Object> config) {
+    BaseStreamsTask(String id, Map<String, Object> config, StreamsOperation streamsOperation) {
         this.id = id;
         this.config = config;
+        this.streamsOperation = streamsOperation;
         if(this.getClass().equals(StreamsProviderTask.class))
             this.type = "provider";
         else if(this.getClass().equals(StreamsProcessorTask.class))
@@ -76,13 +76,23 @@ public abstract class BaseStreamsTask implements StreamsTask {
     }
 
     @Override
-    public final StatusCounts getCurrentStatus() {
-        return new StatusCounts(this.id, this.type, this.workingCounter.get(), this.statusCounter.getSuccess(), this.statusCounter.getFail(), this.timeSpentSuccess.get(), this.timeSpentFailure.get());
+    public StatusCounts getCurrentStatus() {
+        if(this.streamsOperation instanceof DatumStatusCountable) {
+            DatumStatusCounter datumStatusCounter = ((DatumStatusCountable)this.streamsOperation).getDatumStatusCounter();
+            return new StatusCounts(this.id, this.type, this.workingCounter.get(), datumStatusCounter.getSuccess(), datumStatusCounter.getFail(), this.timeSpentSuccess.get(), this.timeSpentFailure.get());
+        }
+        else {
+            return new StatusCounts(this.id, this.type, this.workingCounter.get(), this.statusCounter.getSuccess(), this.statusCounter.getFail(), this.timeSpentSuccess.get(), this.timeSpentFailure.get());
+        }
     }
 
     @Override
     public final String getId() {
         return this.id;
+    }
+
+    public String getType() {
+        return this.type;
     }
 
     @Override
@@ -98,7 +108,7 @@ public abstract class BaseStreamsTask implements StreamsTask {
     public final void prepare(Object configuration) {
         try {
             if(!this.isPrepared)
-                prepareMyself(configuration);
+                this.streamsOperation.prepare(configuration);
         }
         catch(Throwable e) {
             LOGGER.warn("Problem preparing the component[{}]: {}", this.getId(), e.getMessage());
@@ -106,14 +116,11 @@ public abstract class BaseStreamsTask implements StreamsTask {
         this.isPrepared = true;
     }
 
-    protected abstract void prepareMyself(Object configuration);
-
-
     @Override
     public final void cleanup() {
         try {
             if(!isCleanedUp)
-                cleanUpMyself();
+                this.streamsOperation.cleanUp();
         }
         catch(Throwable e) {
             LOGGER.warn("Problem Cleaning Up Component[{}]: {}", this.getId(), e.getMessage());
@@ -121,7 +128,6 @@ public abstract class BaseStreamsTask implements StreamsTask {
         this.isCleanedUp = true;
     }
 
-    protected abstract void cleanUpMyself();
 
     @Override
     public final void process(StreamsDatum datum) {
