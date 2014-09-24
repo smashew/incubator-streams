@@ -160,6 +160,10 @@ public class ThreadedStreamBuilder implements StreamBuilder {
         return this;
     }
 
+    public ThreadedStreamBuilder addStreamsPersistWriter(String id, StreamsPersistWriter writer, String... inBoundIds) {
+        return addStreamsPersistWriter(id, writer, 1, inBoundIds);
+    }
+
     @Override
     public ThreadedStreamBuilder addStreamsPersistWriter(String id, StreamsPersistWriter writer, int numTasks, String... inBoundIds) {
         validateId(id);
