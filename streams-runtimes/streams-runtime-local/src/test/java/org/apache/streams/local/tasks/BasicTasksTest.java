@@ -22,6 +22,7 @@ import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.core.test.processors.PassthroughDatumCounterProcessor;
 import org.apache.streams.core.test.providers.NumericMessageProvider;
 import org.apache.streams.core.test.writer.DatumCounterWriter;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Queue;
@@ -39,6 +40,7 @@ public class BasicTasksTest {
 
 
 
+    @Ignore
     @Test
     public void testProviderTask() {
         int numMessages = 100;
@@ -80,6 +82,7 @@ public class BasicTasksTest {
         };
     }
 
+    @Ignore
     @Test
     public void testProcessorTask() {
         int numMessages = 100;
@@ -118,6 +121,7 @@ public class BasicTasksTest {
         }
     }
 
+    @Ignore
     @Test
     public void testWriterTask() {
         int numMessages = 100;
@@ -163,6 +167,7 @@ public class BasicTasksTest {
         }
     }
 
+    @Ignore
     @Test
     public void testMergeTask() {
         int numMessages = 100;
@@ -200,6 +205,7 @@ public class BasicTasksTest {
         }
     }
 
+    @Ignore
     @Test
     public void testBranching() {
         int numMessages = 100;
@@ -243,6 +249,7 @@ public class BasicTasksTest {
         assertEquals(numMessages, outQueue2.size());
     }
 
+    @Ignore
     @Test
     public void testBranchingSerialization() {
         int numMessages = 1;
