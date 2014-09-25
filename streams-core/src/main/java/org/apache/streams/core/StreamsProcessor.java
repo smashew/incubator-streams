@@ -24,7 +24,7 @@ import java.util.Queue;
 /**
  * Created by sblackmon on 12/13/13.
  */
-public interface StreamsProcessor extends StreamsOperation{
+public interface StreamsProcessor extends StreamsOperation {
 
 
 
