@@ -116,43 +116,44 @@ public class ElasticsearchClientManager {
         return HashCodeBuilder.reflectionHashCode(this, Arrays.asList(this.elasticsearchConfiguration.toString()));
     }
 
-    private synchronized void checkAndLoadClient(String clusterName) {
+    private void checkAndLoadClient(String clusterName) {
 
-        if (clusterName == null)
-            clusterName = this.elasticsearchConfiguration.getClusterName();
+        synchronized (ElasticsearchClientManager.class) {
+            if (clusterName == null)
+                clusterName = this.elasticsearchConfiguration.getClusterName();
 
-        // If it is there, exit early
-        if (ALL_CLIENTS.containsKey(clusterName))
-            return;
+            // If it is there, exit early
+            if (ALL_CLIENTS.containsKey(clusterName))
+                return;
 
-        try {
-            // We are currently using lazy loading to start the elasticsearch cluster, however.
-            LOGGER.info("Creating a new TransportClient: {}", this.elasticsearchConfiguration.getHosts());
+            try {
+                // We are currently using lazy loading to start the elasticsearch cluster, however.
+                LOGGER.info("Creating a new TransportClient: {}", this.elasticsearchConfiguration.getHosts());
 
-            Settings settings = ImmutableSettings.settingsBuilder()
-                    .put("cluster.name", this.elasticsearchConfiguration.getClusterName())
-                    .put("client.transport.ping_timeout", "90s")
-                    .put("client.transport.nodes_sampler_interval", "60s")
-                    .build();
+                Settings settings = ImmutableSettings.settingsBuilder()
+                        .put("cluster.name", this.elasticsearchConfiguration.getClusterName())
+                        .put("client.transport.ping_timeout", "90s")
+                        .put("client.transport.nodes_sampler_interval", "60s")
+                        .build();
 
 
-            // Create the client
-            TransportClient client = new TransportClient(settings);
-            for (String h : this.getElasticsearchConfiguration().getHosts()) {
-                LOGGER.info("Adding Host: {}", h);
-                client.addTransportAddress(new InetSocketTransportAddress(h, this.getElasticsearchConfiguration().getPort().intValue()));
+                // Create the client
+                TransportClient client = new TransportClient(settings);
+                for (String h : this.getElasticsearchConfiguration().getHosts()) {
+                    LOGGER.info("Adding Host: {}", h);
+                    client.addTransportAddress(new InetSocketTransportAddress(h, this.getElasticsearchConfiguration().getPort().intValue()));
+                }
+
+                // Add the client and figure out the version.
+                ElasticsearchClient elasticsearchClient = new ElasticsearchClient(client, getVersion(client));
+
+                // Add it to our static map
+                ALL_CLIENTS.put(clusterName, elasticsearchClient);
+
+            } catch (Exception e) {
+                LOGGER.error("Could not Create elasticsearch Transport Client: {}", e);
             }
-
-            // Add the client and figure out the version.
-            ElasticsearchClient elasticsearchClient = new ElasticsearchClient(client, getVersion(client));
-
-            // Add it to our static map
-            ALL_CLIENTS.put(clusterName, elasticsearchClient);
-
-        } catch (Exception e) {
-            LOGGER.error("Could not Create elasticsearch Transport Client: {}", e);
         }
-
     }
 
     private Version getVersion(Client client) {
