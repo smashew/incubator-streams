@@ -265,14 +265,8 @@ public class ThreadedStreamBuilder implements StreamBuilder {
 
             timer.schedule(updateTask, 0, 1500);
 
-            // Starting all the tasks
-            for(StreamsTask task : this.tasks.values())
-                if(task instanceof Runnable)
-                    this.executor.execute((Runnable)task);
-
             for(StreamsTask t : this.tasks.values())
-                    t.prepare(this.streamConfig);
-
+                t.prepare(this.streamConfig);
 
             // Starting all the tasks
             for(StreamsTask task : this.tasks.values())
