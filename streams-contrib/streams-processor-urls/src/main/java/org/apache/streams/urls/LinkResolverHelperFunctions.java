@@ -40,8 +40,8 @@ public final class LinkResolverHelperFunctions {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LinkResolverHelperFunctions.class);
 
-    private static final String REGEX_URL =
-            "(?:(?:https?|ftp)://)" +                                                       // protocol identifier
+    public static final String REGEX_URL =
+                    "(?:(?:https?|ftp)://)" +                                                       // protocol identifier
                     "(?:\\S+(?::\\S*)?@)?" +                                                // user:pass authentication
                     "(?:" +
                     "(?!(?:10|127)(?:\\.\\d{1,3}){3})" +                                    // IP address exclusion
