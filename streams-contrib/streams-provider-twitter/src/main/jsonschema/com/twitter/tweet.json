@@ -214,6 +214,89 @@
                 "profile_link_color": {
                     "type": "string"
                 },
+                "entities": {
+                  "type": "object",
+                  "dynamic": "true",
+                  "javaType" : "org.apache.streams.twitter.pojo.Entities",
+                  "javaInterfaces": ["java.io.Serializable"],
+                  "properties": {
+                    "user_mentions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "javaType" : "org.apache.streams.twitter.pojo.UserMentions",
+                        "javaInterfaces": ["java.io.Serializable"],
+                        "properties": {
+                          "id": {
+                            "ignore_malformed": false,
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "indices": {
+                            "type": "array",
+                            "items": [{
+                                        "type" : "integer"
+                                      }]
+                          },
+                          "screen_name": {
+                            "type": "string"
+                          },
+                          "id_str": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "hashtags": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "javaType": "org.apache.streams.twitter.pojo.Hashtag",
+                        "javaInterfaces": ["java.io.Serializable"],
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "indices": {
+                            "type": "array",
+                            "items": [{
+                                        "type": "integer"
+                                      }]
+                          }
+                        }
+                      }
+                    },
+                    "urls": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "javaType": "org.apache.streams.twitter.Url",
+                        "javaInterfaces": ["java.io.Serializable"],
+                        "properties": {
+                          "expanded_url": {
+                            "type": "string"
+                          },
+                          "indices": {
+                            "type": "array",
+                            "items": [
+                              {
+                                "type" : "integer"
+                              }
+                            ]
+                          },
+                          "display_url": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
                 "id": {
                     "ignore_malformed": false,
                     "type": "integer"
