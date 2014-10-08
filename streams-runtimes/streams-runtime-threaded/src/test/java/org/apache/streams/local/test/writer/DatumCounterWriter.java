@@ -30,6 +30,8 @@ public class DatumCounterWriter implements StreamsPersistWriter{
 
     protected final AtomicInteger counter = new AtomicInteger(0);
     private final int delayInMilliseconds;
+
+    private int prepareDelayInMs = 0;
     private boolean cleanupCalled = false;
     private boolean prepareCalled = false;
 
@@ -60,6 +62,13 @@ public class DatumCounterWriter implements StreamsPersistWriter{
     }
 
     public void prepare(Object configurationObject) {
+        if(this.prepareDelayInMs > 0) {
+            try {
+                Thread.sleep(this.prepareDelayInMs);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         this.prepareCalled = true;
     }
 
@@ -69,5 +78,9 @@ public class DatumCounterWriter implements StreamsPersistWriter{
 
     public int getDatumsCounted() {
         return this.counter.get();
+    }
+
+    public void setPrepareDelayInMs(int prepareDelayInMs) {
+        this.prepareDelayInMs = prepareDelayInMs;
     }
 }
