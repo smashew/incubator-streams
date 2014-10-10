@@ -17,6 +17,12 @@
         "truncated": {
             "type": "boolean"
         },
+        "retweeted_status": {
+          "type": "object",
+          "required" : false,
+          "description" : "Describes the tweet being retweeted.",
+          "$ref" : "tweet.json"
+        },
         "filter_level": {
             "type": "string"
         },
