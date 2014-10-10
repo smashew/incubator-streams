@@ -24,11 +24,15 @@ import org.apache.streams.local.test.providers.NumericMessageProvider;
 import org.apache.streams.local.test.providers.NumericMessageProviderDelayed;
 import org.apache.streams.local.test.providers.ShapeShifterProvider;
 import org.apache.streams.local.test.writer.DatumCounterWriter;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
@@ -165,6 +169,49 @@ public class ThreadedStreamBuilderTest {
 
         assertTrue("cleanup called", writer.wasCleanupCalled());
         assertTrue("cleanup called", writer.wasPrepeareCalled());
+    }
+
+
+    @Test
+    public void testFiveStreamsAtOnce() {
+
+        final List<AtomicBoolean> runningList = new ArrayList<AtomicBoolean>();
+
+        for(int i = 0; i < 5; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    AtomicBoolean done = new AtomicBoolean(false);
+                    runningList.add(done);
+                    testBasicMergeStream();
+                    done.set(true);
+                }
+            }).start();
+        }
+
+
+        while(runningList.size() < 5) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        boolean shouldStop = false;
+        while(!shouldStop) {
+
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            shouldStop = true;
+            for(AtomicBoolean b : runningList)
+                shouldStop = b.get() && shouldStop;
+
+        }
     }
 
     @Test

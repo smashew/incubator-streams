@@ -27,6 +27,10 @@ import org.apache.streams.local.test.providers.NumericMessageProviderDelayed;
 import org.apache.streams.local.test.writer.DatumCounterWriter;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -103,6 +107,48 @@ public class ThreadedStreamBuilderDelayTest {
         assertEquals("Should have same number", numDatums, writer.getDatumsCounted());
         assertTrue("cleanup called", writer.wasCleanupCalled());
         assertTrue("cleanup called", writer.wasPrepeareCalled());
+    }
+
+
+    @Test
+    public void testFiveStreamsAtOnce() {
+
+        final List<AtomicBoolean> runningList = new ArrayList<AtomicBoolean>();
+
+        for(int i = 0; i < 5; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    AtomicBoolean done = new AtomicBoolean(false);
+                    runningList.add(done);
+                    dualDelayedMergedTest();
+                    done.set(true);
+                }
+            }).start();
+        }
+
+        while(runningList.size() < 5) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        boolean shouldStop = false;
+        while(!shouldStop) {
+
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            shouldStop = true;
+            for(AtomicBoolean b : runningList)
+                shouldStop = b.get() && shouldStop;
+
+        }
     }
 
     @Test
