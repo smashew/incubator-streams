@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * These tests ensure that StreamsBuilder works
@@ -111,23 +112,33 @@ public class ThreadedStreamBuilderDelayTest {
 
 
     @Test
-    public void testFiveStreamsAtOnce() {
+    public void streamStressTest() {
+
+        int numConcurrentStreams = 20;
 
         final List<AtomicBoolean> runningList = new ArrayList<AtomicBoolean>();
+        final List<AtomicBoolean> failureMarker = new ArrayList<AtomicBoolean>();
 
-        for(int i = 0; i < 5; i++) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    AtomicBoolean done = new AtomicBoolean(false);
-                    runningList.add(done);
-                    dualDelayedMergedTest();
-                    done.set(true);
-                }
-            }).start();
+        for(int i = 0; i < numConcurrentStreams; i++) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        AtomicBoolean done = new AtomicBoolean(false);
+                        try {
+                            runningList.add(done);
+                            dualDelayedMergedTest();
+                        }
+                        catch (Throwable e) {
+                            failureMarker.add(new AtomicBoolean(true));
+                        }
+                        finally {
+                            done.set(true);
+                        }
+                    }
+                }).start();
         }
 
-        while(runningList.size() < 5) {
+        while(runningList.size() < numConcurrentStreams) {
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
@@ -137,18 +148,17 @@ public class ThreadedStreamBuilderDelayTest {
 
         boolean shouldStop = false;
         while(!shouldStop) {
-
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
             shouldStop = true;
             for(AtomicBoolean b : runningList)
-                shouldStop = b.get() && shouldStop;
-
+                shouldStop = b != null && b.get() && shouldStop;
         }
+
+        // check to see if anything bubbled up.
+        for(AtomicBoolean failure : failureMarker)
+            if(failure.get())
+                fail("this failed...");
+
+
     }
 
     @Test
@@ -234,7 +244,7 @@ public class ThreadedStreamBuilderDelayTest {
     }
 
     @Test
-    public void dualDelayedMergedTest() {
+    public void dualDelayedMergedTest() throws Exception {
         int numDatums = 6;
 
         StreamBuilder builder = new ThreadedStreamBuilder();

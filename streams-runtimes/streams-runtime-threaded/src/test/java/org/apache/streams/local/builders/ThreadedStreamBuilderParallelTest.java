@@ -26,10 +26,14 @@ import org.apache.streams.local.test.providers.NumericMessageProviderDelayed;
 import org.apache.streams.local.test.writer.DatumCounterWriter;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests the parallel ability of streams
@@ -123,8 +127,60 @@ public class ThreadedStreamBuilderParallelTest {
         assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
+
     @Test
-    public void testParallelProcessorsAndWritersManyDatums() {
+    public void streamStressTest() {
+
+        int numConcurrentStreams = 50;
+
+        final List<AtomicBoolean> runningList = new ArrayList<AtomicBoolean>();
+        final List<AtomicBoolean> failureMarker = new ArrayList<AtomicBoolean>();
+
+        for(int i = 0; i < numConcurrentStreams; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    AtomicBoolean done = new AtomicBoolean(false);
+                    runningList.add(done);
+                    try {
+                        testParallelProcessorsAndWritersWithSillySizedQueues();
+                        testParallelProcessorsAndWritersManyDatums();
+                    }
+                    catch (Throwable e) {
+                        failureMarker.add(new AtomicBoolean(true));
+                    }
+                    finally {
+                        done.set(true);
+                    }
+                }
+            }).start();
+        }
+
+        while(runningList.size() < numConcurrentStreams) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        boolean shouldStop = false;
+        while(!shouldStop || runningList.size() < numConcurrentStreams) {
+            shouldStop = true;
+            for(AtomicBoolean b : runningList)
+                shouldStop = b != null && b.get() && shouldStop;
+        }
+
+        // check to see if anything bubbled up.
+        for(AtomicBoolean failure : failureMarker)
+            if(failure.get())
+                fail("this failed...");
+
+
+    }
+
+    @Test
+    public void testParallelProcessorsAndWritersManyDatums() throws Throwable {
         int numDatums = 2000;
         int parallelHint = 20;
         StreamBuilder builder = new ThreadedStreamBuilder();
