@@ -4,11 +4,12 @@ import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.core.StreamsPersistWriter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class DatumCollectorWriter implements StreamsPersistWriter {
 
-    private final List<StreamsDatum> datums = new ArrayList<StreamsDatum>();
+    private final List<StreamsDatum> datums = Collections.synchronizedList(new ArrayList<StreamsDatum>());
     private boolean cleanupCalled = false;
     private boolean prepareCalled = false;
 

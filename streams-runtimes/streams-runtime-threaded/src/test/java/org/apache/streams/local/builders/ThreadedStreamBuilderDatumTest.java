@@ -4,7 +4,7 @@ import org.apache.streams.builders.threaded.ThreadedStreamBuilder;
 import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.local.test.providers.PreDefinedProvider;
 import org.apache.streams.local.test.writer.DatumCollectorWriter;
-import org.junit.Ignore;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -13,10 +13,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ThreadedStreamBuilderDatumTest {
 
-    @Ignore
     @Test
     public void testDatums() {
         List<StreamsDatum> providerDatums = new ArrayList<StreamsDatum>();
@@ -32,20 +32,29 @@ public class ThreadedStreamBuilderDatumTest {
                 .addStreamsPersistWriter("writer", writer, 1, "provider")
                 .start();
 
-        assertEquals("Datum 1 document is correct", 1, writer.getDatums().get(0).getDocument());
-        assertEquals("Datum 2 document is correct", 2, writer.getDatums().get(1).getDocument());
-        assertEquals("Datum 3 document is correct", 3, writer.getDatums().get(2).getDocument());
 
-        assertEquals("Datum 1 id is correct", "1", writer.getDatums().get(0).getId());
-        assertEquals("Datum 2 id is correct", "2", writer.getDatums().get(1).getId());
-        assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
+        assertEquals(3, writer.getDatums().size());
+
+        boolean found1 = false, found2 = false, found3 = false;
+
+        for(StreamsDatum d : writer.getDatums()) {
+            if(d == null)
+                fail("null datum, unexpected");
+            if(d.getId().equals("1"))
+                found1 = true;
+            else if(d.getId().equals("2"))
+                found2 = true;
+            else if(d.getId().equals("3"))
+                found3 = true;
+        }
+
+        assertTrue(found1 && found2 && found3);
 
         assertTrue("cleanup called", writer.wasCleanupCalled());
         assertTrue("cleanup called", writer.wasPrepeareCalled());
     }
 
 
-    @Ignore
     @Test
     public void testDatumsWithSerialization2() {
         List<StreamsDatum> providerDatums = new ArrayList<StreamsDatum>();
@@ -61,16 +70,28 @@ public class ThreadedStreamBuilderDatumTest {
                 .addStreamsPersistWriter("writer", writer, 1, "provider")
                 .start();
 
-        assertEquals("Datum 1 id is correct", "1", writer.getDatums().get(0).getId());
-        assertEquals("Datum 2 id is correct", "2", writer.getDatums().get(1).getId());
-        assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
+        assertEquals(3, writer.getDatums().size());
+
+        boolean found1 = false, found2 = false, found3 = false;
+
+        for(StreamsDatum d : writer.getDatums()) {
+            if(d == null)
+                fail("null datum, unexpected");
+            if(d.getId().equals("1"))
+                found1 = true;
+            else if(d.getId().equals("2"))
+                found2 = true;
+            else if(d.getId().equals("3"))
+                found3 = true;
+        }
+
+        assertTrue(found1 && found2 && found3);
 
         assertTrue("cleanup called", writer.wasCleanupCalled());
         assertTrue("cleanup called", writer.wasPrepeareCalled());
 
     }
 
-    @Ignore
     @Test
     public void testDatumsWithSerialization1() {
         List<StreamsDatum> providerDatums = new ArrayList<StreamsDatum>();
@@ -86,9 +107,22 @@ public class ThreadedStreamBuilderDatumTest {
                 .addStreamsPersistWriter("writer", writer, 1, "provider")
                 .start();
 
-        assertEquals("Datum 1 id is correct", "1", writer.getDatums().get(0).getId());
-        assertEquals("Datum 2 id is correct", "2", writer.getDatums().get(1).getId());
-        assertEquals("Datum 3 id is correct", "3", writer.getDatums().get(2).getId());
+        boolean found1 = false, found2 = false, found3 = false;
+
+        assertEquals(3, writer.getDatums().size());
+
+        for(StreamsDatum d : writer.getDatums()) {
+            if(d == null)
+                fail("null datum, unexpected");
+            if(d.getId().equals("1"))
+                found1 = true;
+            else if(d.getId().equals("2"))
+                found2 = true;
+            else if(d.getId().equals("3"))
+                found3 = true;
+        }
+
+        assertTrue(found1 && found2 && found3);
 
         assertTrue("cleanup called", writer.wasCleanupCalled());
         assertTrue("cleanup called", writer.wasPrepeareCalled());
