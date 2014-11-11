@@ -20,6 +20,6 @@ package org.apache.streams.builders.threaded;
 import java.util.List;
 import java.util.Map;
 
-public abstract class StreamBuilderEventHandler {
-    public abstract void update(Map<String,StatusCounts> counts, List<StreamsGraphElement> graph);
+public interface StreamBuilderEventHandler {
+    public void update(Map<String,StatusCounts> counts, List<StreamsGraphElement> graph);
 }
