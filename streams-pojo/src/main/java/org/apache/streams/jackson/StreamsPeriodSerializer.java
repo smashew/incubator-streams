@@ -17,8 +17,7 @@ public class StreamsPeriodSerializer extends StdSerializer<Period> implements Se
     }
 
     @Override
-    public void serialize(Period value, JsonGenerator jgen, SerializerProvider provider) throws IOException
-    {
-        jgen.writeString(Integer.toString(value.getMillis()));
+    public void serialize(Period value, JsonGenerator jgen, SerializerProvider provider) throws IOException {
+        jgen.writeString(Long.toString(value.toStandardDuration().getMillis()));
     }
 }
