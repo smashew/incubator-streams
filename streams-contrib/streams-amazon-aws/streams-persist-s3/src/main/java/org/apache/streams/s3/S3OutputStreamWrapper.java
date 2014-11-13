@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -65,7 +66,7 @@ public class S3OutputStreamWrapper extends OutputStream
         this.bucketName = bucketName;
         this.path = path;
         this.fileName = fileName;
-        this.metaData = metaData;
+        this.metaData = metaData != null ? metaData : new HashMap<String, String>();
         this.outputStream = new ByteArrayOutputStream();
     }
 
