@@ -33,7 +33,7 @@ public class ThreadingController {
     private ThreadingControllerCPUObserver threadingControllerCPUObserver = new DefaultThreadingControllerCPUObserver();
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
-    private static final Integer MAX_THREADS_ALLOWED = Math.max(24, NUM_PROCESSORS * 3);
+    private static final Integer MAX_THREADS_ALLOWED = Math.max(100, NUM_PROCESSORS * 3);
     public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
 
     public static ThreadingController getInstance() {
@@ -125,9 +125,46 @@ public class ThreadingController {
         this.listeningExecutorService = MoreExecutors.listeningDecorator(this.threadPoolExecutor);
     }
 
-    public synchronized void execute(final Runnable command, final ThreadingControllerCallback callback) {
+    private class ThreadedCallbackWrapper implements FutureCallback<Object> {
 
-        synchronized (ThreadingController.INSTANCE) {
+        private final ThreadingControllerCallback callback;
+
+        public ThreadedCallbackWrapper(ThreadingControllerCallback callback) {
+            this.callback = callback;
+        }
+
+        @Override
+        public void onSuccess(Object o) {
+            try {
+                callback.onSuccess(o);
+            }
+            catch(Throwable e) {
+                /* */
+            }
+            finally {
+                workingNow.decrementAndGet();
+                lock.signal();
+            }
+        }
+
+        @Override
+        public void onFailure(Throwable t) {
+            try {
+                callback.onFailure(t);
+            }
+            catch (Throwable e) {
+                /* */
+            }
+            finally {
+                workingNow.decrementAndGet();
+                lock.signal();
+            }
+        }
+
+
+    }
+
+    public synchronized void execute(final Runnable command, final ThreadingControllerCallback callback) {
 
             this.numberOfObservations.incrementAndGet();
             this.sumOfObservations.addAndGet(this.getProcessCpuLoad());
@@ -192,38 +229,8 @@ public class ThreadingController {
                 }
             }
 
-            FutureCallback alertItIsDone = new FutureCallback() {
-                public void onSuccess(Object o) {
-                    try {
-                        callback.onSuccess(o);
-                    }
-                    catch(Throwable e) {
-                        /* */
-                    }
-                    finally {
-                        workingNow.decrementAndGet();
-                        lock.signal();
-                    }
-                }
-
-                public void onFailure(Throwable t) {
-                    try {
-                        callback.onFailure(t);
-                    }
-                    catch (Throwable e) {
-                        /* */
-                    }
-                    finally {
-                        workingNow.decrementAndGet();
-                        lock.signal();
-                    }
-                }
-            };
-
-
-
             this.workingNow.incrementAndGet();
-            Futures.addCallback(this.listeningExecutorService.submit(command), alertItIsDone);
-        }
+
+            Futures.addCallback(this.listeningExecutorService.submit(command), new ThreadedCallbackWrapper(callback));
     }
 }

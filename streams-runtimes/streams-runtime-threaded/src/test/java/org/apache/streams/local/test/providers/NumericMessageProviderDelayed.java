@@ -17,10 +17,11 @@
  */
 package org.apache.streams.local.test.providers;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.core.StreamsProvider;
 import org.apache.streams.core.StreamsResultSet;
-import org.apache.streams.builders.threaded.WaitUntilAvailableExecutionHandler;
 import org.apache.streams.util.ComponentUtils;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -97,12 +98,7 @@ public class NumericMessageProviderDelayed implements StreamsProvider {
 
         private void collectIdsAndPlaceOnQueue() {
 
-            ThreadPoolExecutor executorService = new ThreadPoolExecutor(threadCount,
-                    threadCount,
-                    0L,
-                    TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(threadCount),
-                    new WaitUntilAvailableExecutionHandler());
+            ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
             for (int i = 0; i < numMessages; i++) {
                 final int toOffer = i;
