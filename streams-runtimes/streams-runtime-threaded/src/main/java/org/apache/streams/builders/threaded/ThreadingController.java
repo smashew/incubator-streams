@@ -4,11 +4,6 @@ import com.google.common.util.concurrent.*;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 
-import javax.management.Attribute;
-import javax.management.AttributeList;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-import java.lang.management.ManagementFactory;
 import java.util.Date;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -16,10 +11,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
+import org.slf4j.LoggerFactory;
 
 public class ThreadingController {
 
-    private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(ThreadingController.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ThreadingController.class);
 
     private final ThreadPoolExecutor threadPoolExecutor;
     private final ListeningExecutorService listeningExecutorService;
@@ -28,6 +24,7 @@ public class ThreadingController {
     private final AtomicLong lastWorked = new AtomicLong(new Date().getTime());
     private final AtomicLong numberOfObservations = new AtomicLong(0);
     private final AtomicDouble sumOfObservations = new AtomicDouble(0);
+    private final AtomicInteger workingNow = new AtomicInteger(0);
 
     private volatile double lastCPUObservation = 0.0;
 
@@ -36,7 +33,7 @@ public class ThreadingController {
     private ThreadingControllerCPUObserver threadingControllerCPUObserver = new DefaultThreadingControllerCPUObserver();
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
-    private static final Integer MAX_THREADS_ALLOWED = Math.max(12, NUM_PROCESSORS * 3);
+    private static final Integer MAX_THREADS_ALLOWED = Math.max(24, NUM_PROCESSORS * 3);
     public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
 
     public static ThreadingController getInstance() {
@@ -79,6 +76,13 @@ public class ThreadingController {
     public Double getLastCPUObservation()       { return this.lastCPUObservation; }
 
     /**
+     * The number of items that are currently executing right now.
+     * @return
+     * An integer of the number of items executing at this very moment.
+     */
+    public Integer getWorkingNow()              { return workingNow.get(); }
+
+    /**
      * The class that is being used to provide the CPU load
      * @return
      * The canonical class name that is calculating the CPU usage.
@@ -97,33 +101,6 @@ public class ThreadingController {
      */
     public Double getScaleThreshold() {
         return scaleThreshold;
-    }
-
-    private static class DefaultThreadingControllerCPUObserver implements ThreadingControllerCPUObserver {
-
-        private static final Double FALL_BACK = 0.7;
-
-        @Override
-        public double getCPUPercentUtilization() {
-            try {
-                MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-                ObjectName name = ObjectName.getInstance("java.lang:type=OperatingSystem");
-
-                AttributeList list = mbs.getAttributes(name, new String[]{"ProcessCpuLoad"});
-
-                if (list.isEmpty()) return Double.NaN;
-
-                Attribute att = (Attribute) list.get(0);
-                Double value = (Double) att.getValue();
-
-                Double load = ((int)(value * 1000) / 10.0);
-
-                return load > 0 && load < 1.0 ? load : FALL_BACK;
-            }
-            catch(Throwable t) {
-                return FALL_BACK;
-            }
-        }
     }
 
     private ThreadingController() {
@@ -147,9 +124,6 @@ public class ThreadingController {
 
         this.listeningExecutorService = MoreExecutors.listeningDecorator(this.threadPoolExecutor);
     }
-
-
-    private final AtomicInteger workingNow = new AtomicInteger(0);
 
     public synchronized void execute(final Runnable command, final ThreadingControllerCallback callback) {
 
@@ -193,7 +167,6 @@ public class ThreadingController {
                 }
 
                 if(newThreadCount != currentThreadCount) {
-
                     this.threadPoolExecutor.setCorePoolSize(this.numThreads.get());
                     this.threadPoolExecutor.setMaximumPoolSize(this.numThreads.get());
                 }
