@@ -194,17 +194,33 @@ public class ThreadingController {
 
             FutureCallback alertItIsDone = new FutureCallback() {
                 public void onSuccess(Object o) {
-                    workingNow.decrementAndGet();
-                    lock.signal();
-                    callback.onSuccess(o);
+                    try {
+                        callback.onSuccess(o);
+                    }
+                    catch(Throwable e) {
+                        /* */
+                    }
+                    finally {
+                        workingNow.decrementAndGet();
+                        lock.signal();
+                    }
                 }
 
                 public void onFailure(Throwable t) {
-                    workingNow.decrementAndGet();
-                    lock.signal();
-                    callback.onSuccess(t);
+                    try {
+                        callback.onFailure(t);
+                    }
+                    catch (Throwable e) {
+                        /* */
+                    }
+                    finally {
+                        workingNow.decrementAndGet();
+                        lock.signal();
+                    }
                 }
             };
+
+
 
             this.workingNow.incrementAndGet();
             Futures.addCallback(this.listeningExecutorService.submit(command), alertItIsDone);

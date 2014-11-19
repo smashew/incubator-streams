@@ -101,7 +101,6 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
             }
 
             if(resultSet != null && resultSet.getQueue() != null) {
-
                 while (resultSet.isRunning() || resultSet.getQueue().size() > 0) {
                     // Is there anything to do?
                     if(resultSet.getQueue().isEmpty()) {
@@ -141,13 +140,6 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
             e.printStackTrace();
             LOGGER.warn("Unknown problem reading the queue, no datums affected: {}", e.getMessage());
         }
-    }
-
-    private final Set<String> alreadyCleanedUp = new HashSet<String>();
-
-    private void cleanupTask(StreamsTask t) {
-
-        alreadyCleanedUp.add(this.getId());
     }
 
     private void workMe(final StreamsDatum datum) {
