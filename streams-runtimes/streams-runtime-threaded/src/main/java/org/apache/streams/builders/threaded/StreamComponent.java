@@ -169,7 +169,7 @@ class StreamComponent {
      *
      * @return StreamsTask for this component
      */
-    public StreamsTask createConnectedTask(Map<String, Object> config, ThreadingController threadingController) {
+    public StreamsTask createConnectedTask(Map<String, Object> config) {
 
         StreamsTask task;
 
@@ -192,7 +192,7 @@ class StreamComponent {
         }
         else if(this.provider != null) {
 
-            task = new StreamsProviderTask(this.id, config, this.provider, StreamsProviderTask.Type.READ_CURRENT, threadingController);
+            task = new StreamsProviderTask(this.id, config, this.provider, StreamsProviderTask.Type.READ_CURRENT);
 
             for(StreamComponent c : this.outBound.keySet())
                 task.addOutputQueue(c.getId());

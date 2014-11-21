@@ -27,6 +27,7 @@ import org.apache.streams.local.test.writer.DatumCounterWriter;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -110,15 +111,13 @@ public class ThreadedStreamBuilderParallelTest {
     @Test
     public void testParallelWritersManyDatums() {
         int numDatums = 2000;
-        int parallelHint = 20;
-        StreamBuilder builder = new ThreadedStreamBuilder();
+
         PassThroughStaticCounterProcessor processor = new PassThroughStaticCounterProcessor();
         DatumCounterWriter writer = new DatumCounterWriter();
-        builder.newReadCurrentStream("sp1", new NumericMessageProvider(numDatums))
+        new ThreadedStreamBuilder().newReadCurrentStream("sp1", new NumericMessageProvider(numDatums))
                 .addStreamsProcessor("proc1", processor, 1, "sp1")
-                .addStreamsPersistWriter("writer1", writer, parallelHint, "proc1");
-
-        builder.start();
+                .addStreamsPersistWriter("writer1", writer, "proc1")
+                .start();
 
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
@@ -128,13 +127,16 @@ public class ThreadedStreamBuilderParallelTest {
     }
 
 
+    /**
+     * Run 100 streams at the same time, each with 1,000 datums, twice.
+     */
     @Test
     public void streamStressTest() {
 
-        int numConcurrentStreams = 50;
+        int numConcurrentStreams = 100;
 
-        final List<AtomicBoolean> runningList = new ArrayList<AtomicBoolean>();
-        final List<AtomicBoolean> failureMarker = new ArrayList<AtomicBoolean>();
+        final List<AtomicBoolean> runningList = Collections.synchronizedList(new ArrayList<AtomicBoolean>());
+        final List<AtomicBoolean> failureMarker = Collections.synchronizedList(new ArrayList<AtomicBoolean>());
 
         for(int i = 0; i < numConcurrentStreams; i++) {
             new Thread(new Runnable() {
@@ -143,8 +145,34 @@ public class ThreadedStreamBuilderParallelTest {
                     AtomicBoolean done = new AtomicBoolean(false);
                     runningList.add(done);
                     try {
-                        testParallelProcessorsAndWritersWithSillySizedQueues();
-                        testParallelProcessorsAndWritersManyDatums();
+                        int numDatums = 1000;
+
+                        PassThroughStaticCounterProcessor processor = new PassThroughStaticCounterProcessor();
+                        DatumCounterWriter writer = new DatumCounterWriter();
+                        new ThreadedStreamBuilder().newReadCurrentStream("sp1", new NumericMessageProvider(numDatums))
+                                .addStreamsProcessor("proc1", processor, 1, "sp1")
+                                .addStreamsPersistWriter("writer1", writer, "proc1")
+                                .start();
+
+                        assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
+                        assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
+                        assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+                        assertTrue("cleanup called", writer.wasCleanupCalled());
+                        assertTrue("cleanup called", writer.wasPrepeareCalled());
+
+                        processor = new PassThroughStaticCounterProcessor();
+                        writer = new DatumCounterWriter();
+                        new ThreadedStreamBuilder().newReadCurrentStream("sp1", new NumericMessageProvider(numDatums))
+                                .addStreamsProcessor("proc1", processor, 1, "sp1")
+                                .addStreamsPersistWriter("writer1", writer, "proc1")
+                                .start();
+
+                        assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
+                        assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);
+                        assertEquals("All should have seen the data", writer.getDatumsCounted(), numDatums);
+                        assertTrue("cleanup called", writer.wasCleanupCalled());
+                        assertTrue("cleanup called", writer.wasPrepeareCalled());
+
                     }
                     catch (Throwable e) {
                         failureMarker.add(new AtomicBoolean(true));
@@ -242,17 +270,15 @@ public class ThreadedStreamBuilderParallelTest {
     @Test
     public void testParallelProcessorsAndWritersSingleWithBigDelays() {
         int numDatums = 1;
-        int parallelHint = 20;
 
-        StreamBuilder builder = new ThreadedStreamBuilder();
-        NumericMessageProviderDelayed provider = new NumericMessageProviderDelayed(numDatums, 1000);
-        PassThroughStaticCounterProcessor processor = new PassThroughStaticCounterProcessor(1000);
-        DatumCounterWriter writer = new DatumCounterWriter(1000);
-        builder.newReadCurrentStream("sp1", provider)
-                .addStreamsProcessor("proc1", processor, parallelHint, "sp1")
-                .addStreamsPersistWriter("writer1", writer, parallelHint, "proc1");
+        NumericMessageProviderDelayed provider = new NumericMessageProviderDelayed(numDatums, 200);
+        PassThroughStaticCounterProcessor processor = new PassThroughStaticCounterProcessor(200);
+        DatumCounterWriter writer = new DatumCounterWriter(200);
 
-        builder.start();
+        new ThreadedStreamBuilder().newReadCurrentStream("sp1", provider)
+                .addStreamsProcessor("proc1", processor, "sp1")
+                .addStreamsPersistWriter("writer1", writer, "proc1")
+                .start();
 
         assertEquals("number of items in should equal number of items out", writer.getDatumsCounted(), numDatums);
         assertEquals("Correct number of processors created", processor.getMessageCount(), numDatums);

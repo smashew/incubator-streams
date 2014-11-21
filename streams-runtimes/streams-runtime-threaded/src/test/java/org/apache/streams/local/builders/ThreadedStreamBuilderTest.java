@@ -192,6 +192,7 @@ public class ThreadedStreamBuilderTest {
 
         while(runningList.size() < 5) {
             try {
+                Thread.yield();
                 Thread.sleep(1);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -202,6 +203,7 @@ public class ThreadedStreamBuilderTest {
         while(!shouldStop) {
 
             try {
+                Thread.yield();
                 Thread.sleep(1);
             } catch (InterruptedException e) {
                 e.printStackTrace();

@@ -37,7 +37,6 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
     private final AtomicInteger outStanding = new AtomicInteger(0);
     private final AtomicBoolean keepRunning = new AtomicBoolean(true);
     private final Condition lock = new SimpleCondition();
-    private final ThreadingController threadingController;
 
     public static enum Type {
         PERPETUAL,
@@ -46,17 +45,12 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
         READ_RANGE
     }
 
-    private static final int START = 0;
-    private static final int END = 1;
-
     private static final int TIMEOUT = 100000000;
-    private static final int DEFAULT_SLEEP = 200;
 
-    public StreamsProviderTask(String id, Map<String, Object> config, StreamsProvider provider, Type type, ThreadingController threadingController) {
+    public StreamsProviderTask(String id, Map<String, Object> config, StreamsProvider provider, Type type) {
         super(id, config, provider);
         this.provider = provider;
         this.type = type;
-        this.threadingController = threadingController;
     }
 
     public boolean isRunning() {
@@ -104,7 +98,7 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
                 while (resultSet.isRunning() || resultSet.getQueue().size() > 0) {
                     // Is there anything to do?
                     if(resultSet.getQueue().isEmpty()) {
-                        safeQuickRest(5);           // then rest
+                        safeQuickRest(1);           // then rest
                     } else {
                         flushResults(resultSet);    // then work
                     }
@@ -146,7 +140,7 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
 
         outStanding.incrementAndGet();
 
-        this.threadingController.execute(new Runnable() {
+        ThreadingController.INSTANCE.execute(new Runnable() {
             @Override
             public void run() {
                 sendToChildren(datum);
@@ -179,7 +173,6 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
     }
 
     protected void safeQuickRest(int waitTime) {
-
         // The queue is empty, we might as well sleep.
         Thread.yield();
         try {
@@ -187,6 +180,7 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
         } catch (InterruptedException ie) {
             // No Operation
         }
+        Thread.yield();
     }
 
 }

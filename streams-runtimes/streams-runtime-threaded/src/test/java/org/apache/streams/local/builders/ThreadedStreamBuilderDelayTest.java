@@ -125,7 +125,9 @@ public class ThreadedStreamBuilderDelayTest {
                     public void run() {
                         AtomicBoolean done = new AtomicBoolean(false);
                         try {
-                            runningList.add(done);
+                            synchronized (ThreadedStreamBuilderDelayTest.class) {
+                                runningList.add(done);
+                            }
                             dualDelayedMergedTest();
                         }
                         catch (Throwable e) {
@@ -149,8 +151,10 @@ public class ThreadedStreamBuilderDelayTest {
         boolean shouldStop = false;
         while(!shouldStop) {
             shouldStop = true;
-            for(AtomicBoolean b : runningList)
-                shouldStop = b != null && b.get() && shouldStop;
+            synchronized (ThreadedStreamBuilderDelayTest.class) {
+                for (AtomicBoolean b : runningList)
+                    shouldStop = b != null && b.get() && shouldStop;
+            }
         }
 
         // check to see if anything bubbled up.

@@ -33,7 +33,7 @@ public class ThreadingController {
     private ThreadingControllerCPUObserver threadingControllerCPUObserver = new DefaultThreadingControllerCPUObserver();
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
-    private static final Integer MAX_THREADS_ALLOWED = Math.max(100, NUM_PROCESSORS * 3);
+    private static final Integer MAX_THREADS_ALLOWED = Math.max(NUM_PROCESSORS * 6, NUM_PROCESSORS * 3);
     public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
 
     public static ThreadingController getInstance() {
@@ -160,77 +160,76 @@ public class ThreadingController {
                 lock.signal();
             }
         }
-
-
     }
 
-    public synchronized void execute(final Runnable command, final ThreadingControllerCallback callback) {
+    synchronized void execute(final Runnable command, final ThreadingControllerCallback callback) {
 
-            this.numberOfObservations.incrementAndGet();
-            this.sumOfObservations.addAndGet(this.getProcessCpuLoad());
+        this.numberOfObservations.incrementAndGet();
+        this.sumOfObservations.addAndGet(this.getProcessCpuLoad());
 
-            if((new Date().getTime() > (SCALE_CHECK + this.lastWorked.get())) && this.numberOfObservations.incrementAndGet() > 3) {
+        if((new Date().getTime() > (SCALE_CHECK + this.lastWorked.get())) && this.numberOfObservations.get() > Math.max(NUM_PROCESSORS/2, 2)) {
 
-                double average = this.sumOfObservations.doubleValue() / this.numberOfObservations.doubleValue();
-                this.lastCPUObservation = average;
+            double average = this.sumOfObservations.doubleValue() / this.numberOfObservations.doubleValue();
+            this.lastCPUObservation = average;
 
-                /* re-size the shared thread-pool if we aren't under significant stress */
-                int currentThreadCount = this.numThreads.get();
-                int newThreadCount = this.numThreads.get();
+            /* re-size the shared thread-pool if we aren't under significant stress */
+            int currentThreadCount = this.numThreads.get();
+            int newThreadCount = this.numThreads.get();
 
-                /* Adjust to keep the processor between 72% & 88% */
-                if (average < this.scaleThreshold * .9) {
-                    /* The processor isn't being worked that hard, we can add the unit here */
-                    newThreadCount = Math.min(MAX_THREADS_ALLOWED, (newThreadCount + 1));
-                    if(newThreadCount != currentThreadCount) {
-                        LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
-                    }
-                } else if (average > this.scaleThreshold * 1.1) {
-                    newThreadCount = Math.max((newThreadCount - 1), NUM_PROCESSORS);
-                    if(newThreadCount != currentThreadCount) {
-                        LOGGER.info("------- SCALING DOWN THREAD POOL TO {} THREADS (CPU @ {}) --------", newThreadCount, average);
-                    }
-                }
-
-                this.numThreads.set(newThreadCount);
-
-                // wait
-                while (this.workingNow.get() >= this.numThreads.get()) {
-                    try {
-                        this.lock.await();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-
+            /* Adjust to keep the processor between 72% & 88% */
+            if (average < this.scaleThreshold * .9) {
+                /* The processor isn't being worked that hard, we can add the unit here */
+                newThreadCount = Math.min(MAX_THREADS_ALLOWED, (newThreadCount + 1));
                 if(newThreadCount != currentThreadCount) {
-                    this.threadPoolExecutor.setCorePoolSize(this.numThreads.get());
-                    this.threadPoolExecutor.setMaximumPoolSize(this.numThreads.get());
+                    LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
                 }
+            } else if (average > this.scaleThreshold * 1.1) {
+                newThreadCount = Math.max((newThreadCount - 1), NUM_PROCESSORS);
+                if(newThreadCount != currentThreadCount) {
+                    LOGGER.info("------- SCALING DOWN THREAD POOL TO {} THREADS (CPU @ {}) --------", newThreadCount, average);
+                }
+            }
 
+            this.numThreads.set(newThreadCount);
+
+            // wait
+            while (this.workingNow.get() >= this.numThreads.get()) {
+                try {
+                    this.lock.await();
+                } catch (InterruptedException e) {
+                    /* no operation */
+                }
+            }
+
+            if(newThreadCount != currentThreadCount) {
+                this.threadPoolExecutor.setCorePoolSize(this.numThreads.get());
+                this.threadPoolExecutor.setMaximumPoolSize(this.numThreads.get());
+            }
+
+            // reset our counters
+            this.lastWorked.set(new Date().getTime());
+            this.numberOfObservations.set(0);
+            this.sumOfObservations.set(0);
+        }
+        else {
+            if(new Date().getTime() > (SCALE_CHECK + this.lastWorked.get())) {
+                // not enough observations reset the counters.
                 this.lastWorked.set(new Date().getTime());
                 this.numberOfObservations.set(0);
                 this.sumOfObservations.set(0);
             }
-            else {
-                if(new Date().getTime() > (SCALE_CHECK + this.lastWorked.get())) {
-                    // not enough observations reset the counters.
-                    this.lastWorked.set(new Date().getTime());
-                    this.numberOfObservations.set(0);
-                    this.sumOfObservations.set(0);
-                }
 
-                while (this.workingNow.get() >= this.numThreads.get()) {
-                    try {
-                        this.lock.await();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+            while (this.workingNow.get() >= this.numThreads.get()) {
+                try {
+                    this.lock.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
+        }
 
-            this.workingNow.incrementAndGet();
+        this.workingNow.incrementAndGet();
 
-            Futures.addCallback(this.listeningExecutorService.submit(command), new ThreadedCallbackWrapper(callback));
+        Futures.addCallback(this.listeningExecutorService.submit(command), new ThreadedCallbackWrapper(callback));
     }
 }
