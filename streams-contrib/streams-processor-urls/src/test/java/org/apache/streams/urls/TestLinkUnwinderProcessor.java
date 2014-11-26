@@ -8,6 +8,7 @@ import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.jackson.StreamsJacksonMapper;
 import org.apache.streams.jackson.StreamsJacksonModule;
 import org.apache.streams.pojo.json.Activity;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -49,8 +50,8 @@ public class TestLinkUnwinderProcessor {
 
     @Test
     public void testActivityLinkUnwinderProcessorTdotCo() throws Exception{
-        testActivityUnwinderHelper(Lists.newArrayList("http://t.co/lLFgFynv2G"), Lists.newArrayList("http://www.holmesreport.com/news-info/14877/Holmes-Report-Names-Americas-Specialist-PR-Agencies-Of-The-Year.aspx"));
-        testStringActivityUnwinderHelper(Lists.newArrayList("http://t.co/lLFgFynv2G"), Lists.newArrayList("http://www.holmesreport.com/news-info/14877/Holmes-Report-Names-Americas-Specialist-PR-Agencies-Of-The-Year.aspx"));
+        testActivityUnwinderHelper(Lists.newArrayList("http://t.co/lLFgFynv2G"), Lists.newArrayList("http://www.holmesreport.com/latest"));
+        testStringActivityUnwinderHelper(Lists.newArrayList("http://t.co/lLFgFynv2G"), Lists.newArrayList("http://www.holmesreport.com/latest"));
     }
 
     @Test
