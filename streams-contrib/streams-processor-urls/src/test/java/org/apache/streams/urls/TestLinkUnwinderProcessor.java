@@ -15,12 +15,17 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-/**
- * Created by rebanks on 2/27/14.
- */
 public class TestLinkUnwinderProcessor {
 
     private static String activityString;
+
+    @Test
+    public void testLinkUnwinderBadDomain() {
+        LinkResolver resolver = new LinkResolver("http://nope@#$%");
+        resolver.run();
+        LinkDetails details = resolver.getLinkDetails();
+        assertEquals("Should be 404", details.getLinkStatus(), LinkDetails.LinkStatus.MALFORMED_URL);
+    }
 
     @Test
     public void testLinkResolverSerializability() {
@@ -33,7 +38,7 @@ public class TestLinkUnwinderProcessor {
         LinkResolver resolver = new LinkResolver("http://www.kneesupmotherbrown.me/2013/05/26/well-its-fair-to-say-may-has-been-a-crappy-month");
         resolver.run();
         LinkDetails details = resolver.getLinkDetails();
-        assertTrue("Should be 404", details.getLinkStatus() == LinkDetails.LinkStatus.NOT_FOUND);
+        assertEquals("Should be 404", details.getLinkStatus(), LinkDetails.LinkStatus.NOT_FOUND);
     }
 
     @Test
