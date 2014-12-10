@@ -72,6 +72,12 @@ public class TestLinkUnwinderProcessor {
     }
 
     @Test
+    public void testDecember2014Owly() throws Exception {
+        testActivityUnwinderHelper(Lists.newArrayList("http://ow.ly/FGboo"), Lists.newArrayList("http://www.smashew.com/2013/08/29/api-part-2/"));
+        testStringActivityUnwinderHelper(Lists.newArrayList("http://ow.ly/FGboo"), Lists.newArrayList("http://www.smashew.com/2013/08/29/api-part-2/"));
+    }
+
+    @Test
     public void testActivityLinkUnwinderProcessorGoDaddy() throws Exception{
         testActivityUnwinderHelper(Lists.newArrayList("http://x.co/3yapt"), Lists.newArrayList("http://www.wcgworld.com/"));
         testStringActivityUnwinderHelper(Lists.newArrayList("http://x.co/3yapt"), Lists.newArrayList("http://www.wcgworld.com/"));
