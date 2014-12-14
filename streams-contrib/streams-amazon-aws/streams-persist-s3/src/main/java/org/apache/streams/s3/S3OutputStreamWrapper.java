@@ -36,8 +36,13 @@ import java.util.Map;
 /**
  * This class writes to a temporary file on disk, then it uploads that temporary file whenever the file is closed.
  */
-public class S3OutputStreamWrapper implements Flushable, Closeable
+public class S3OutputStreamWrapper implements Flushable
 {
+    public interface S3OutputStreamWrapperCloseCallback {
+        void completed();
+        void error();
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(S3OutputStreamWrapper.class);
 
     private final AmazonS3Client amazonS3Client;
@@ -88,16 +93,35 @@ public class S3OutputStreamWrapper implements Flushable, Closeable
     }
 
     /**
-     * Whenever the output stream is closed we are going to kick the ByteArrayOutputStream off to Amazon S3.
-     * @throws IOException
-     * Exception thrown from the FileOutputStream
+     * An asynchronous close. Upon close the file is written
      */
-    public void close() throws IOException {
+    public void close() {
+        closeWithNotification(null);
+    }
+
+    public void closeWithNotification(final S3OutputStreamWrapperCloseCallback callback) {
         if(!isClosed)
         {
             try
             {
-                this.addFile();
+                this.addFile(new S3ProgressListener() {
+                    @Override
+                    public void onPersistableTransfer(PersistableTransfer persistableTransfer) {
+                        LOGGER.info("persistableTransfer: {}", persistableTransfer.toString());
+                    }
+
+                    @Override
+                    public void progressChanged(ProgressEvent progressEvent) {
+                        if(progressEvent.getEventType().equals(ProgressEventType.CLIENT_REQUEST_SUCCESS_EVENT)) {
+                            LOGGER.info("File COMPLETED: {}", fileName);
+                            if(!file.delete()) {
+                                LOGGER.warn("Unable to delete temporary file: {}", file.getAbsolutePath());
+                            }
+                            if(callback != null)
+                                callback.completed();
+                        }
+                    }
+                });
             }
             catch(Exception e) {
                 e.printStackTrace();
@@ -110,7 +134,7 @@ public class S3OutputStreamWrapper implements Flushable, Closeable
         }
     }
 
-    private void addFile() throws Exception {
+    private void addFile(S3ProgressListener s3ProgressListener) throws Exception {
 
         this.outputStream.flush();
         this.outputStream.close();
@@ -128,22 +152,7 @@ public class S3OutputStreamWrapper implements Flushable, Closeable
 
         putObjectRequest.setMetadata(metadata);
 
-        transferManager.upload(putObjectRequest, new S3ProgressListener() {
-            @Override
-            public void onPersistableTransfer(PersistableTransfer persistableTransfer) {
-                LOGGER.info("persistableTransfer: {}", persistableTransfer.toString());
-            }
-
-            @Override
-            public void progressChanged(ProgressEvent progressEvent) {
-                if(progressEvent.getEventType().equals(ProgressEventType.CLIENT_REQUEST_SUCCESS_EVENT)) {
-                    LOGGER.info("File COMPLETED: {}", fileName);
-                    if(!file.delete()) {
-                        LOGGER.warn("Unable to delete temporary file: {}", file.getAbsolutePath());
-                    }
-                }
-            }
-        });
+        transferManager.upload(putObjectRequest, s3ProgressListener);
 
         LOGGER.info("AddFile Complete: {}", fileName);
 

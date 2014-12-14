@@ -23,8 +23,6 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -50,6 +48,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
     private AmazonS3Client amazonS3Client;
     private S3WriterConfiguration s3WriterConfiguration;
     private final List<String> writtenFiles = new ArrayList<String>();
+    private final AtomicInteger outstanding = new AtomicInteger(0);
 
     private final AtomicLong totalBytesWritten = new AtomicLong();
     private AtomicLong bytesWrittenThisFile = new AtomicLong();
@@ -184,6 +183,15 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
             this.closeSafely(this.currentWriter);
             this.currentWriter = null;
 
+            while(outstanding.get() > 0) {
+                try {
+                    Thread.sleep(50);
+                }
+                catch(InterruptedException ioe) {
+                    /* Interupted Exception */
+                }
+            }
+
             // Logging of information to alert the user to the activities of this class
             LOGGER.debug("File Closed: Records[{}] Bytes[{}] {} ", this.fileLineCounter.get(), this.bytesWrittenThisFile.get(), this.writtenFiles.get(this.writtenFiles.size()-1));
         }
@@ -192,8 +200,18 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
     private synchronized void closeSafely(S3OutputStreamWrapper writer)  {
         if(writer != null) {
             try {
-                writer.flush();
-                writer.close();
+                outstanding.incrementAndGet();
+                writer.closeWithNotification(new S3OutputStreamWrapper.S3OutputStreamWrapperCloseCallback() {
+                    @Override
+                    public void completed() {
+                        outstanding.decrementAndGet();
+                    }
+
+                    @Override
+                    public void error() {
+                        outstanding.decrementAndGet();
+                    }
+                });
             } catch(Exception e) {
                 // noOp
             }
