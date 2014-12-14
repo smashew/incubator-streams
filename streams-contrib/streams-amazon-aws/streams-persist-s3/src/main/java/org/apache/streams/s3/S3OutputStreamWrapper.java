@@ -124,8 +124,7 @@ public class S3OutputStreamWrapper implements Flushable
                 });
             }
             catch(Exception e) {
-                e.printStackTrace();
-                LOGGER.warn("There was an error adding the temporaryFile to S3");
+                LOGGER.warn("There was an error adding the temporaryFile to S3: {}", e.getMessage());
             }
             finally {
                 // we are done here.
