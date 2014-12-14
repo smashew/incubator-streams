@@ -75,7 +75,7 @@ public class S3OutputStreamWrapper implements Flushable
         this.path = path;
         this.fileName = fileName;
         this.metaData = metaData != null ? metaData : new HashMap<String, String>();
-        this.file = File.createTempFile("aws-s3-" + path.replace("/", "_") + fileName, ".tsv");
+        this.file = File.createTempFile("aws-s3-temp", ".tsv");
         this.file.deleteOnExit();
         this.outputStream = new OutputStreamWriter(new FileOutputStream(file));
     }
@@ -112,7 +112,7 @@ public class S3OutputStreamWrapper implements Flushable
 
                     @Override
                     public void progressChanged(ProgressEvent progressEvent) {
-                        if(progressEvent.getEventType().equals(ProgressEventType.CLIENT_REQUEST_SUCCESS_EVENT)) {
+                        if(progressEvent.getEventType().equals(ProgressEventType.TRANSFER_COMPLETED_EVENT)) {
                             LOGGER.info("File COMPLETED: {}", fileName);
                             if(!file.delete()) {
                                 LOGGER.warn("Unable to delete temporary file: {}", file.getAbsolutePath());
@@ -138,7 +138,6 @@ public class S3OutputStreamWrapper implements Flushable
 
         this.outputStream.flush();
         this.outputStream.close();
-
 
         final TransferManager transferManager = new TransferManager(this.amazonS3Client);
 
