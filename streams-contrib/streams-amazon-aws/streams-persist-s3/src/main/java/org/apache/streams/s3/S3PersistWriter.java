@@ -23,6 +23,7 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.services.s3.transfer.TransferManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -45,7 +46,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
     private final static char DELIMITER = '\t';
 
     private ObjectMapper objectMapper = StreamsJacksonMapper.getInstance();
-    private AmazonS3Client amazonS3Client;
+    private TransferManager transferManager;
     private S3WriterConfiguration s3WriterConfiguration;
     private final List<String> writtenFiles = new ArrayList<String>();
     private final AtomicInteger outstanding = new AtomicInteger(0);
@@ -59,10 +60,6 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
     private Map<String, String> objectMetaData = new HashMap<String, String>() {{ }};
 
     private S3OutputStreamWrapper currentWriter = null;
-
-    public AmazonS3Client getAmazonS3Client() {
-        return this.amazonS3Client;
-    }
 
     public S3WriterConfiguration getS3WriterConfiguration() {
         return this.s3WriterConfiguration;
@@ -96,7 +93,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
      * Configuration of the write paths and instructions are still required.
      */
     public S3PersistWriter(AmazonS3Client amazonS3Client, S3WriterConfiguration s3WriterConfiguration) {
-        this.amazonS3Client = amazonS3Client;
+        this.transferManager = new TransferManager(amazonS3Client);
         this.s3WriterConfiguration = s3WriterConfiguration;
     }
 
@@ -152,7 +149,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
                     (this.s3WriterConfiguration.getChunk() ? "/" : "-") + new Date().getTime() + ".tsv";
 
             // create the output stream
-            S3OutputStreamWrapper outputStream = new S3OutputStreamWrapper(this.amazonS3Client,
+            S3OutputStreamWrapper outputStream = new S3OutputStreamWrapper(this.transferManager,
                     this.s3WriterConfiguration.getBucket(),
                     this.s3WriterConfiguration.getWriterPath(),
                     fileName,
@@ -259,15 +256,15 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
     }
 
     public void prepare(Object configurationObject) {
+
         // Connect to S3
         synchronized (this) {
-
             // if the user has chosen to not set the object mapper, then set a default object mapper for them.
             if(this.objectMapper == null)
                 this.objectMapper = new ObjectMapper();
 
             // Create the credentials Object
-            if(this.amazonS3Client == null) {
+            if(this.transferManager == null) {
                 AWSCredentials credentials = new BasicAWSCredentials(s3WriterConfiguration.getKey(), s3WriterConfiguration.getSecretKey());
 
                 ClientConfiguration clientConfig = new ClientConfiguration();
@@ -277,8 +274,9 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
                 S3ClientOptions clientOptions = new S3ClientOptions();
                 clientOptions.setPathStyleAccess(true);
 
-                this.amazonS3Client = new AmazonS3Client(credentials, clientConfig);
-                this.amazonS3Client.setS3ClientOptions(clientOptions);
+                AmazonS3Client amazonS3Client = new AmazonS3Client(credentials, clientConfig);
+                amazonS3Client.setS3ClientOptions(clientOptions);
+                this.transferManager = new TransferManager(amazonS3Client);
             }
         }
     }
