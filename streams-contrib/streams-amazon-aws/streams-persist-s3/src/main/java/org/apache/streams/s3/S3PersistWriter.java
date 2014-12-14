@@ -284,7 +284,9 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
     }
 
     public void cleanUp() {
-        closeAndDestroyWriter();
+        synchronized (this) {
+            closeAndDestroyWriter();
+        }
     }
 
     public DatumStatusCounter getDatumStatusCounter() {

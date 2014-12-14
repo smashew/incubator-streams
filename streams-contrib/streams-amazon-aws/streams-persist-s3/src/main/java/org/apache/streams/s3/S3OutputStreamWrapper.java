@@ -45,7 +45,7 @@ public class S3OutputStreamWrapper implements Flushable
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3OutputStreamWrapper.class);
 
-    private final AmazonS3Client amazonS3Client;
+    private final TransferManager transferManager;
     private final String bucketName;
     private final String path;
     private final String fileName;
@@ -70,7 +70,11 @@ public class S3OutputStreamWrapper implements Flushable
      * If there is an issue creating the stream, this
      */
     public S3OutputStreamWrapper(AmazonS3Client amazonS3Client, String bucketName, String path, String fileName, Map<String, String> metaData) throws IOException {
-        this.amazonS3Client = amazonS3Client;
+        this(new TransferManager(amazonS3Client), bucketName, path, fileName, metaData);
+    }
+
+    public S3OutputStreamWrapper(TransferManager transferManager, String bucketName, String path, String fileName, Map<String, String> metaData) throws IOException {
+        this.transferManager = transferManager;
         this.bucketName = bucketName;
         this.path = path;
         this.fileName = fileName;
@@ -79,6 +83,7 @@ public class S3OutputStreamWrapper implements Flushable
         this.file.deleteOnExit();
         this.outputStream = new OutputStreamWriter(new FileOutputStream(file));
     }
+
 
     public void write(int b) throws IOException {
         this.outputStream.write(b);
@@ -117,8 +122,14 @@ public class S3OutputStreamWrapper implements Flushable
                             if(!file.delete()) {
                                 LOGGER.warn("Unable to delete temporary file: {}", file.getAbsolutePath());
                             }
-                            if(callback != null)
+                            if(callback != null) {
                                 callback.completed();
+                            }
+                        } else if(progressEvent.getEventType().equals(ProgressEventType.TRANSFER_FAILED_EVENT)) {
+                            LOGGER.warn("File was unable to upload", fileName);
+                            if(callback != null) {
+                                callback.error();
+                            }
                         }
                     }
                 });
@@ -137,8 +148,6 @@ public class S3OutputStreamWrapper implements Flushable
 
         this.outputStream.flush();
         this.outputStream.close();
-
-        final TransferManager transferManager = new TransferManager(this.amazonS3Client);
 
         PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, path + fileName, this.file);
 
