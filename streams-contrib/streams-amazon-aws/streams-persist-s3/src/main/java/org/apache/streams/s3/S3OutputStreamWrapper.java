@@ -17,10 +17,14 @@
  */
 package org.apache.streams.s3;
 
+import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.transfer.PersistableTransfer;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,11 +34,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This class uses ByteArrayOutputStreams to ensure files are written to S3 properly. The stream is written to the
- * in memory ByteArrayOutPutStream before it is finally written to Amazon S3. The size the file is allowed to become
- * is directly controlled by the S3PersistWriter.
+ * This class writes to a temporary file on disk, then it uploads that temporary file whenever the file is closed.
  */
-public class S3OutputStreamWrapper extends OutputStream
+public class S3OutputStreamWrapper implements Flushable, Closeable
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3OutputStreamWrapper.class);
 
@@ -42,14 +44,15 @@ public class S3OutputStreamWrapper extends OutputStream
     private final String bucketName;
     private final String path;
     private final String fileName;
-    private ByteArrayOutputStream outputStream;
+    private final File file;
+    private final OutputStreamWriter outputStream;
     private final Map<String, String> metaData;
     private boolean isClosed = false;
 
     /**
      * Create an OutputStream Wrapper
      * @param amazonS3Client
-     * The Amazon S3 Client which will be handling the file
+     * The Amazon S3 Transfer Manager for this session
      * @param bucketName
      * The Bucket Name you are wishing to write to.
      * @param path
@@ -67,19 +70,17 @@ public class S3OutputStreamWrapper extends OutputStream
         this.path = path;
         this.fileName = fileName;
         this.metaData = metaData != null ? metaData : new HashMap<String, String>();
-        this.outputStream = new ByteArrayOutputStream();
+        this.file = File.createTempFile("aws-temp-file", ".tsv");
+        this.file.deleteOnExit();
+        this.outputStream = new OutputStreamWriter(new FileOutputStream(file));
     }
 
     public void write(int b) throws IOException {
         this.outputStream.write(b);
     }
 
-    public void write(byte[] b) throws IOException {
-        this.outputStream.write(b);
-    }
-
-    public void write(byte[] b, int off, int len) throws IOException {
-        this.outputStream.write(b, off, len);
+    public void write(String str) throws IOException {
+        this.outputStream.write(str);
     }
 
     public void flush() throws IOException {
@@ -97,8 +98,6 @@ public class S3OutputStreamWrapper extends OutputStream
             try
             {
                 this.addFile();
-                this.outputStream.close();
-                this.outputStream = null;
             }
             catch(Exception e) {
                 e.printStackTrace();
@@ -113,31 +112,40 @@ public class S3OutputStreamWrapper extends OutputStream
 
     private void addFile() throws Exception {
 
-        InputStream is = new ByteArrayInputStream(this.outputStream.toByteArray());
-        int contentLength = outputStream.size();
+        this.outputStream.flush();
+        this.outputStream.close();
 
-        TransferManager transferManager = new TransferManager(amazonS3Client);
+
+        final TransferManager transferManager = new TransferManager(this.amazonS3Client);
+
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, path + fileName, this.file);
+
         ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setExpirationTime(DateTime.now().plusDays(365*3).toDate());
-        metadata.setContentLength(contentLength);
-
+        metadata.setExpirationTime(DateTime.now().plusDays(365 * 3).toDate());
         metadata.addUserMetadata("writer", "org.apache.streams");
-
         for(String s : metaData.keySet())
             metadata.addUserMetadata(s, metaData.get(s));
 
-        String fileNameToWrite = path + fileName;
-        Upload upload = transferManager.upload(bucketName, fileNameToWrite, is, metadata);
-        try {
-            upload.waitForUploadResult();
+        putObjectRequest.setMetadata(metadata);
 
-            is.close();
-            transferManager.shutdownNow(false);
-            LOGGER.info("S3 File Close[{} kb] - {}", contentLength / 1024, path + fileName);
-        } catch (Exception e) {
-            // No Op
-        }
+        transferManager.upload(putObjectRequest, new S3ProgressListener() {
+            @Override
+            public void onPersistableTransfer(PersistableTransfer persistableTransfer) {
+                LOGGER.info("persistableTransfer: {}", persistableTransfer.toString());
+            }
 
+            @Override
+            public void progressChanged(ProgressEvent progressEvent) {
+                if(progressEvent.getEventType().equals(ProgressEventType.CLIENT_REQUEST_SUCCESS_EVENT)) {
+                    LOGGER.info("File COMPLETED: {}", fileName);
+                    if(!file.delete()) {
+                        LOGGER.warn("Unable to delete temporary file: {}", file.getAbsolutePath());
+                    }
+                }
+            }
+        });
+
+        LOGGER.info("AddFile Complete: {}", fileName);
 
     }
 

@@ -23,6 +23,8 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -57,7 +59,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
 
     private Map<String, String> objectMetaData = new HashMap<String, String>() {{ }};
 
-    private OutputStreamWriter currentWriter = null;
+    private S3OutputStreamWrapper currentWriter = null;
 
     public AmazonS3Client getAmazonS3Client() {
         return this.amazonS3Client;
@@ -137,7 +139,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
 
     }
 
-    private synchronized OutputStreamWriter resetFile() throws Exception {
+    private synchronized S3OutputStreamWrapper resetFile() throws Exception {
         // this will keep it thread safe, so we don't create too many files
         if(this.fileLineCounter.get() == 0 && this.currentWriter != null)
             return this.currentWriter;
@@ -151,7 +153,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
                     (this.s3WriterConfiguration.getChunk() ? "/" : "-") + new Date().getTime() + ".tsv";
 
             // create the output stream
-            OutputStream outputStream = new S3OutputStreamWrapper(this.amazonS3Client,
+            S3OutputStreamWrapper outputStream = new S3OutputStreamWrapper(this.amazonS3Client,
                     this.s3WriterConfiguration.getBucket(),
                     this.s3WriterConfiguration.getWriterPath(),
                     fileName,
@@ -167,11 +169,11 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
             // Log that we are creating this file
             LOGGER.info("File Created: Bucket[{}] - {}", this.s3WriterConfiguration.getBucket(), this.s3WriterConfiguration.getWriterPath() + fileName);
 
-            // return the output stream
-            return new OutputStreamWriter(outputStream);
-        } catch (Exception e) {
-            LOGGER.error(e.getMessage());
+            return outputStream;
+        } catch(Exception e){
             throw e;
+        } catch(Throwable e) {
+            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -187,7 +189,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
         }
     }
 
-    private synchronized void closeSafely(Writer writer)  {
+    private synchronized void closeSafely(S3OutputStreamWrapper writer)  {
         if(writer != null) {
             try {
                 writer.flush();
@@ -210,8 +212,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
         }
     }
 
-    private String convertResultToString(StreamsDatum entry)
-    {
+    private String convertResultToString(StreamsDatum entry) {
         String metadata = null;
 
         try {
