@@ -75,7 +75,7 @@ public class S3OutputStreamWrapper implements Flushable
         this.path = path;
         this.fileName = fileName;
         this.metaData = metaData != null ? metaData : new HashMap<String, String>();
-        this.file = File.createTempFile("aws-temp-file", ".tsv");
+        this.file = File.createTempFile("aws-s3-" + path.replace("/", "_") + fileName, ".tsv");
         this.file.deleteOnExit();
         this.outputStream = new OutputStreamWriter(new FileOutputStream(file));
     }
