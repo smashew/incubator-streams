@@ -34,6 +34,7 @@ import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.client.Client;
 import org.elasticsearch.common.joda.time.DateTime;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.slf4j.Logger;
@@ -63,7 +64,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
 
     private final List<String> affectedIndexes = new ArrayList<String>();
 
-    private final ElasticsearchClientManager manager;
+    private final Client client;
     private final ElasticsearchWriterConfiguration config;
 
     private BulkRequestBuilder bulkRequest;
@@ -98,10 +99,15 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
     }
 
     public ElasticsearchPersistWriter(ElasticsearchWriterConfiguration config, ElasticsearchClientManager manager) {
-        this.config = config;
-        this.manager = manager;
-        this.bulkRequest = this.manager.getClient().prepareBulk();
+        this(config, manager.getClient());
     }
+
+    public ElasticsearchPersistWriter(ElasticsearchWriterConfiguration config, Client client) {
+        this.config = config;
+        this.client = client;
+        this.bulkRequest = this.client.prepareBulk();
+    }
+
 
     public long getBatchesSent()                            { return this.batchesSent.get(); }
     public long getBatchesResponded()                       { return batchesResponded.get(); }
@@ -126,7 +132,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
     public long getTotalSeconds()                           { return this.totalSeconds.get(); }
     public List<String> getAffectedIndexes()                { return this.affectedIndexes; }
 
-    public boolean isConnected()                            { return (this.manager.getClient() != null); }
+    public boolean isConnected()                            { return (this.client != null); }
 
     @Override
     public void write(StreamsDatum streamsDatum) {
@@ -192,8 +198,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
                 updateSettingsRequest.settings(ImmutableSettings.settingsBuilder().put("refresh_interval", "5s"));
 
                 // submit to ElasticSearch
-                this.manager.getClient()
-                        .admin()
+                this.client.admin()
                         .indices()
                         .updateSettings(updateSettingsRequest)
                         .actionGet();
@@ -202,8 +207,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
             checkIndexImplications(indexName);
 
             LOGGER.debug("Refreshing ElasticSearch index: {}", indexName);
-            this.manager.getClient()
-                    .admin()
+            this.client.admin()
                     .indices()
                     .prepareRefresh(indexName)
                     .execute()
@@ -235,7 +239,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
         this.currentBatchBytes.set(0);
 
         // reset our bulk request builder
-        this.bulkRequest = this.manager.getClient().prepareBulk();
+        this.bulkRequest = this.client.prepareBulk();
     }
 
     private synchronized void waitToCatchUp(int batchThreshold, int timeOutThresholdInMS) {
@@ -298,7 +302,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
         Preconditions.checkNotNull(type);
         Preconditions.checkNotNull(json);
 
-        IndexRequestBuilder indexRequestBuilder = manager.getClient()
+        IndexRequestBuilder indexRequestBuilder = this.client
                 .prepareIndex(indexName, type)
                 .setSource(json);
 
@@ -387,8 +391,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
                 updateSettingsRequest.settings(ImmutableSettings.settingsBuilder().put("refresh_interval", -1));
 
                 // submit to ElasticSearch
-                this.manager.getClient()
-                        .admin()
+                this.client.admin()
                         .indices()
                         .updateSettings(updateSettingsRequest)
                         .actionGet();
@@ -398,8 +401,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
 
     public void createIndexIfMissing(String indexName) {
         // Synchronize this on a static class level
-        if (!this.manager.getClient()
-                .admin()
+        if (!this.client.admin()
                 .indices()
                 .exists(new IndicesExistsRequest(indexName))
                 .actionGet()
@@ -408,7 +410,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
             // It does not exist... So we are going to need to create the index.
             // we are going to assume that the 'templates' that we have loaded into
             // elasticsearch are sufficient to ensure the index is being created properly.
-            CreateIndexResponse response = this.manager.getClient().admin().indices().create(new CreateIndexRequest(indexName)).actionGet();
+            CreateIndexResponse response = this.client.admin().indices().create(new CreateIndexRequest(indexName)).actionGet();
 
             if (response.isAcknowledged()) {
                 LOGGER.info("Index Created: {}", indexName);
