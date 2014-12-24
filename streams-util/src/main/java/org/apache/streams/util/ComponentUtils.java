@@ -38,12 +38,14 @@ public class ComponentUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static void offerUntilSuccess(Object entry, Queue queue) {
+    public static void offerUntilSuccess(final Object entry, final Queue queue) {
         int waitTime = 1;
-        while(!queue.offer(entry)) {
-            safeQuickRest(waitTime);
-            waitTime = ((waitTime * 2) > 10) ? (waitTime * 2) : waitTime;
-            waitTime = Math.min(waitTime, 10);
+        synchronized (queue) {
+            while (!queue.offer(entry)) {
+                safeQuickRest(waitTime);
+                waitTime = ((waitTime * 2) > 10) ? (waitTime * 2) : waitTime;
+                waitTime = Math.min(waitTime, 10);
+            }
         }
     }
 

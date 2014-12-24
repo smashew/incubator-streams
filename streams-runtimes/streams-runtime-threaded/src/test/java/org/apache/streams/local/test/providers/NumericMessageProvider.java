@@ -25,6 +25,7 @@ import org.joda.time.DateTime;
 
 import java.math.BigInteger;
 import java.util.Iterator;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -52,31 +53,19 @@ public class NumericMessageProvider implements StreamsProvider {
     }
 
     public StreamsResultSet readCurrent() {
-        synchronized (NumericMessageProvider.class) {
-            if(this.resultSet == null)
-                this.resultSet = new ResultSet();
-        }
         return this.resultSet;
     }
 
     public StreamsResultSet readNew(BigInteger sequence) {
-        synchronized (NumericMessageProvider.class) {
-            if(this.resultSet == null)
-                this.resultSet = new ResultSet();
-        }
         return this.resultSet;
     }
 
     public StreamsResultSet readRange(DateTime start, DateTime end) {
-        synchronized (NumericMessageProvider.class) {
-            if(this.resultSet == null)
-                this.resultSet = new ResultSet();
-        }
         return this.resultSet;
     }
 
     public void prepare(Object configurationObject) {
-
+        this.resultSet = new ResultSet();
     }
 
     public void cleanUp() {
@@ -86,11 +75,10 @@ public class NumericMessageProvider implements StreamsProvider {
     private class ResultSet extends StreamsResultSet {
 
         private ResultSet() {
-            super(new ConcurrentLinkedQueue<StreamsDatum>());
+            super(new ConcurrentLinkedQueue<StreamsDatum>(new ArrayBlockingQueue<StreamsDatum>(1000)));
             for(int i = 0; i < numMessages; i++) {
                 StreamsDatum datum = new StreamsDatum(new NumericMessageObject(startNumber + i));
                 ComponentUtils.offerUntilSuccess(datum, this.getQueue());
-
             }
         }
     }
