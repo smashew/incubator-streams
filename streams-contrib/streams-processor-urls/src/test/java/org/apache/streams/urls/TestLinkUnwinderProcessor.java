@@ -53,11 +53,10 @@ public class TestLinkUnwinderProcessor {
         testStringActivityUnwinderHelper(Lists.newArrayList("http://bit.ly/1cX5Rh4"), Lists.newArrayList("http://www.wcgworld.com/"));
     }
 
-    @Ignore
     @Test
     public void testActivityLinkUnwinderProcessorTdotCo() throws Exception{
-        testActivityUnwinderHelper(Lists.newArrayList("http://t.co/lLFgFynv2G"), Lists.newArrayList("http://www.holmesreport.com/latest"));
-        testStringActivityUnwinderHelper(Lists.newArrayList("http://t.co/lLFgFynv2G"), Lists.newArrayList("http://www.holmesreport.com/latest"));
+        testActivityUnwinderHelper(Lists.newArrayList("http://t.co/XDkGt0vJaF"), Lists.newArrayList("http://instagram.com/p/ibkJDWK97z/"));
+        testStringActivityUnwinderHelper(Lists.newArrayList("http://t.co/XDkGt0vJaF"), Lists.newArrayList("http://instagram.com/p/ibkJDWK97z/"));
     }
 
     @Test
