@@ -211,7 +211,7 @@ public class ThreadedStreamBuilderTest {
 
             shouldStop = true;
             for(AtomicBoolean b : runningList)
-                shouldStop = b.get() && shouldStop;
+                shouldStop = b != null && b.get() && shouldStop;
 
         }
     }
