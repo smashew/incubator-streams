@@ -47,8 +47,8 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
 
     private static final int TIMEOUT = 100000000;
 
-    public StreamsProviderTask(String id, Map<String, Object> config, StreamsProvider provider, Type type) {
-        super(id, config, provider);
+    public StreamsProviderTask(ThreadingController threadingController, String id, Map<String, Object> config, StreamsProvider provider, Type type) {
+        super(threadingController, id, config, provider);
         this.provider = provider;
         this.type = type;
     }
@@ -140,7 +140,7 @@ public class StreamsProviderTask extends BaseStreamsTask implements Runnable {
 
         outStanding.incrementAndGet();
 
-        ThreadingController.INSTANCE.execute(new Runnable() {
+        getThreadingController().execute(new Runnable() {
             @Override
             public void run() {
                 sendToChildren(datum);

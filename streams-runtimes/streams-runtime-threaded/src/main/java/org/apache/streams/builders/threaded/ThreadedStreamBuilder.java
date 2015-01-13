@@ -34,6 +34,8 @@ import java.util.concurrent.locks.Condition;
  */
 public class ThreadedStreamBuilder implements StreamBuilder {
 
+    private final ThreadingController threadingController;
+
     private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(ThreadedStreamBuilder.class);
 
     private final List<StreamsGraphElement> graphElements = new ArrayList<StreamsGraphElement>();
@@ -46,7 +48,7 @@ public class ThreadedStreamBuilder implements StreamBuilder {
         public Thread newThread(Runnable r) {
             Thread t = new Thread(r);
             t.setName("Apache Streams - Provider[" + DateTime.now().toString() + "]");
-            t.setPriority(Math.max(1,(int)(Thread.currentThread().getPriority()*.5)));
+            t.setPriority(Math.max(1,(int)(Thread.currentThread().getPriority() * .5)));
             return t;
         }
     });
@@ -58,18 +60,32 @@ public class ThreadedStreamBuilder implements StreamBuilder {
     private final Map<String, StreamsTask> tasks = new LinkedHashMap<String, StreamsTask>();
     private final Collection<StreamBuilderEventHandler> eventHandlers = new ArrayList<StreamBuilderEventHandler>();
 
-    /**
-     *
-     */
     public ThreadedStreamBuilder() {
-        this(new ArrayBlockingQueue<StreamsDatum>(2000), null);
+        this(new ArrayBlockingQueue<StreamsDatum>(2000), null, ThreadingController.getInstance());
     }
 
-    /**
-     * @param queue
-     */
+    public ThreadedStreamBuilder(ThreadingController threadingController) {
+        this(new ArrayBlockingQueue<StreamsDatum>(2000), null, threadingController);
+    }
+
     public ThreadedStreamBuilder(Queue<StreamsDatum> queue) {
-        this(queue, null);
+        this(queue, null, ThreadingController.getInstance());
+    }
+
+    public ThreadedStreamBuilder(Queue<StreamsDatum> queue, ThreadingController threadingController) {
+        this(queue, null, threadingController);
+    }
+
+    public ThreadedStreamBuilder(Map<String, Object> streamConfig) {
+        this(new ArrayBlockingQueue<StreamsDatum>(50), streamConfig, ThreadingController.getInstance());
+    }
+
+    public ThreadedStreamBuilder(Queue<StreamsDatum> queue, Map<String, Object> streamConfig, ThreadingController threadingController) {
+        this.queue = queue;
+        this.providers = new LinkedHashMap<String, StreamComponent>();
+        this.components = new LinkedHashMap<String, StreamComponent>();
+        this.streamConfig = streamConfig;
+        this.threadingController = threadingController;
     }
 
     public List<StreamsGraphElement> getGraphElements() {
@@ -110,46 +126,31 @@ public class ThreadedStreamBuilder implements StreamBuilder {
         }
     }
 
-    /**
-     * @param streamConfig
-     */
-    public ThreadedStreamBuilder(Map<String, Object> streamConfig) {
-        this(new ArrayBlockingQueue<StreamsDatum>(50), streamConfig);
-    }
-
-    public ThreadedStreamBuilder(Queue<StreamsDatum> queue, Map<String, Object> streamConfig) {
-
-        this.queue = queue;
-        this.providers = new LinkedHashMap<String, StreamComponent>();
-        this.components = new LinkedHashMap<String, StreamComponent>();
-        this.streamConfig = streamConfig;
-    }
-
     @Override
     public ThreadedStreamBuilder newPerpetualStream(String id, StreamsProvider provider) {
         validateId(id);
-        this.providers.put(id, new StreamComponent(id, provider, true));
+        this.providers.put(id, new StreamComponent(this.threadingController, id, provider, true));
         return this;
     }
 
     @Override
     public ThreadedStreamBuilder newReadCurrentStream(String id, StreamsProvider provider) {
         validateId(id);
-        this.providers.put(id, new StreamComponent(id, provider, false));
+        this.providers.put(id, new StreamComponent(this.threadingController, id, provider, false));
         return this;
     }
 
     @Override
     public ThreadedStreamBuilder newReadNewStream(String id, StreamsProvider provider, BigInteger sequence) {
         validateId(id);
-        this.providers.put(id, new StreamComponent(id, provider, sequence));
+        this.providers.put(id, new StreamComponent(this.threadingController, id, provider, sequence));
         return this;
     }
 
     @Override
     public ThreadedStreamBuilder newReadRangeStream(String id, StreamsProvider provider, DateTime start, DateTime end) {
         validateId(id);
-        this.providers.put(id, new StreamComponent(id, provider, start, end));
+        this.providers.put(id, new StreamComponent(this.threadingController, id, provider, start, end));
         return this;
     }
 
@@ -161,7 +162,7 @@ public class ThreadedStreamBuilder implements StreamBuilder {
     @Override
     public ThreadedStreamBuilder addStreamsProcessor(String id, StreamsProcessor processor, int numTasks, String... inBoundIds) {
         validateId(id);
-        StreamComponent comp = new StreamComponent(id, processor, cloneQueue(), numTasks);
+        StreamComponent comp = new StreamComponent(this.threadingController, id, processor, cloneQueue(), numTasks);
         this.components.put(id, comp);
         connectToOtherComponents(inBoundIds, comp);
         return this;
@@ -174,7 +175,7 @@ public class ThreadedStreamBuilder implements StreamBuilder {
     @Override
     public ThreadedStreamBuilder addStreamsPersistWriter(String id, StreamsPersistWriter writer, int numTasks, String... inBoundIds) {
         validateId(id);
-        StreamComponent comp = new StreamComponent(id, writer, cloneQueue(), numTasks);
+        StreamComponent comp = new StreamComponent(this.threadingController, id, writer, cloneQueue(), numTasks);
         this.components.put(id, comp);
         connectToOtherComponents(inBoundIds, comp);
         return this;

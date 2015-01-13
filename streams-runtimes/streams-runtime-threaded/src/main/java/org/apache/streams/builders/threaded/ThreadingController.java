@@ -17,6 +17,9 @@ public class ThreadingController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ThreadingController.class);
 
+    private final String name;
+    private final int maxNumberOfTheads;
+    private final int priority;
     private final ThreadPoolExecutor threadPoolExecutor;
     private final ListeningExecutorService listeningExecutorService;
     private final Condition lock = new SimpleCondition();
@@ -28,16 +31,36 @@ public class ThreadingController {
 
     private volatile double lastCPUObservation = 0.0;
 
-    private static final long SCALE_CHECK = 1000;
-    private Double scaleThreshold = .8;
+    private static final long SCALE_CHECK = 2000;
+    private Double scaleThreshold = .85;
     private ThreadingControllerCPUObserver threadingControllerCPUObserver = new DefaultThreadingControllerCPUObserver();
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
-    private static final Integer MAX_THREADS_ALLOWED = Math.max(NUM_PROCESSORS * 6, NUM_PROCESSORS * 3);
-    public static final ThreadingController INSTANCE = new ThreadingController(NUM_PROCESSORS);
+
+    public static final ThreadingController INSTANCE_LOW_PRIORITY = new ThreadingController("Apache Streams [high]", NUM_PROCESSORS, NUM_PROCESSORS * 2, Thread.NORM_PRIORITY - 2);
+    public static final ThreadingController INSTANCE = new ThreadingController("Apache Streams [default]", NUM_PROCESSORS, NUM_PROCESSORS * 5, Thread.NORM_PRIORITY);
+    public static final ThreadingController INSTANCE_HIGH_PRIORITY = new ThreadingController("Apache Streams [high]", NUM_PROCESSORS, NUM_PROCESSORS * 7, Thread.NORM_PRIORITY + 2);
+
+    /**
+     * Use for very low priority items... The thread-pool that runs this runs at priority
+     * (Thread.NORM_PRIORITY - 2) = 3
+     * @return
+     * The threading controller
+     */
+    public static ThreadingController getInstanceLowPriority() {
+        return INSTANCE_LOW_PRIORITY;
+    }
 
     public static ThreadingController getInstance() {
         return INSTANCE;
+    }
+
+    public static ThreadingController getInstanceHighPriority() {
+        return INSTANCE_HIGH_PRIORITY;
+    }
+
+    public String getName() {
+        return name;
     }
 
     /**
@@ -46,6 +69,15 @@ public class ThreadingController {
      * Integer representing the number of threads in the core pool.
      */
     public Integer getNumThreads()              { return this.numThreads.get(); }
+
+    /**
+     * The current priority of this threaded pool.
+     * @return
+     * The
+     */
+    public int getPriority() {
+        return priority;
+    }
 
     /**
      * The time interval that is being used to determine how often to scale our threads.
@@ -103,13 +135,12 @@ public class ThreadingController {
         return scaleThreshold;
     }
 
-    private ThreadingController() {
-        this(NUM_PROCESSORS);
-    }
+    private ThreadingController(final String name, final int startThreadCount, final int maxNumberOfThreads, final int priority) {
 
-    private ThreadingController(int numThreads) {
-
-        this.numThreads = new AtomicInteger(numThreads);
+        this.name = name;
+        this.numThreads = new AtomicInteger(startThreadCount);
+        this.maxNumberOfTheads = maxNumberOfThreads;
+        this.priority = priority;
 
         this.threadPoolExecutor = new ThreadPoolExecutor(
                 this.numThreads.get(),
@@ -119,7 +150,8 @@ public class ThreadingController {
                 new LinkedBlockingQueue<Runnable>());
 
         this.threadPoolExecutor.setThreadFactory(new BasicThreadFactory.Builder()
-                .namingPattern("apache-streams [threaded builder] - %d")
+                .priority(this.priority)
+                .namingPattern(this.name + "- %d")
                 .build());
 
         this.listeningExecutorService = MoreExecutors.listeningDecorator(this.threadPoolExecutor);
@@ -135,30 +167,16 @@ public class ThreadingController {
 
         @Override
         public void onSuccess(Object o) {
-            try {
-                callback.onSuccess(o);
-            }
-            catch(Throwable e) {
-                /* */
-            }
-            finally {
-                workingNow.decrementAndGet();
-                lock.signal();
-            }
+            callback.onSuccess(o);
+            workingNow.decrementAndGet();
+            lock.signal();
         }
 
         @Override
         public void onFailure(Throwable t) {
-            try {
-                callback.onFailure(t);
-            }
-            catch (Throwable e) {
-                /* */
-            }
-            finally {
-                workingNow.decrementAndGet();
-                lock.signal();
-            }
+            callback.onFailure(t);
+            workingNow.decrementAndGet();
+            lock.signal();
         }
     }
 
@@ -179,7 +197,7 @@ public class ThreadingController {
             /* Adjust to keep the processor between 72% & 88% */
             if (average < this.scaleThreshold * .9) {
                 /* The processor isn't being worked that hard, we can add the unit here */
-                newThreadCount = Math.min(MAX_THREADS_ALLOWED, (newThreadCount + 1));
+                newThreadCount = Math.min(this.maxNumberOfTheads, (newThreadCount + 1));
                 if(newThreadCount != currentThreadCount) {
                     LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
                 }

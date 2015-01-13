@@ -34,8 +34,8 @@ public class StreamsProcessorTask extends BaseStreamsTask {
 
     protected final StreamsProcessor processor;
 
-    public StreamsProcessorTask(String id, Map<String, Object> config, StreamsProcessor processor) {
-        super(id, config, processor);
+    public StreamsProcessorTask(ThreadingController threadingController, String id, Map<String, Object> config, StreamsProcessor processor) {
+        super(threadingController, id, config, processor);
         this.processor = processor;
     }
 

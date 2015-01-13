@@ -34,6 +34,7 @@ class StreamComponent {
     private static final int START = 1;
     private static final int END = 2;
 
+    private final ThreadingController threadingController;
     private String id;
     private Set<StreamComponent> inBound;
     private Map<StreamComponent, Queue<StreamsDatum>> outBound;
@@ -51,7 +52,8 @@ class StreamComponent {
      * @param id
      * @param provider
      */
-    public StreamComponent(String id, StreamsProvider provider, boolean perpetual) {
+    public StreamComponent(ThreadingController threadingController, String id, StreamsProvider provider, boolean perpetual) {
+        this.threadingController = threadingController;
         this.id = id;
         this.provider = provider;
         this.perpetual = perpetual;
@@ -65,7 +67,8 @@ class StreamComponent {
      * @param start
      * @param end
      */
-    public StreamComponent(String id, StreamsProvider provider, DateTime start, DateTime end) {
+    public StreamComponent(ThreadingController threadingController, String id, StreamsProvider provider, DateTime start, DateTime end) {
+        this.threadingController = threadingController;
         this.id = id;
         this.provider = provider;
         this.dateRange = new DateTime[2];
@@ -81,7 +84,8 @@ class StreamComponent {
      * @param provider
      * @param sequence
      */
-    public StreamComponent(String id, StreamsProvider provider, BigInteger sequence) {
+    public StreamComponent(ThreadingController threadingController, String id, StreamsProvider provider, BigInteger sequence) {
+        this.threadingController = threadingController;
         this.id = id;
         this.provider = provider;
         this.sequence = sequence;
@@ -94,7 +98,8 @@ class StreamComponent {
      * @param inQueue
      * @param numTasks
      */
-    public StreamComponent(String id, StreamsProcessor processor, Queue<StreamsDatum> inQueue, int numTasks) {
+    public StreamComponent(ThreadingController threadingController, String id, StreamsProcessor processor, Queue<StreamsDatum> inQueue, int numTasks) {
+        this.threadingController = threadingController;
         this.id = id;
         this.processor = processor;
         this.inQueue = inQueue;
@@ -109,7 +114,8 @@ class StreamComponent {
      * @param inQueue
      * @param numTasks
      */
-    public StreamComponent(String id, StreamsPersistWriter writer, Queue<StreamsDatum> inQueue, int numTasks) {
+    public StreamComponent(ThreadingController threadingController, String id, StreamsPersistWriter writer, Queue<StreamsDatum> inQueue, int numTasks) {
+        this.threadingController = threadingController;
         this.id = id;
         this.writer = writer;
         this.inQueue = inQueue;
@@ -173,12 +179,10 @@ class StreamComponent {
 
         StreamsTask task;
 
-        BlockingQueue<StreamsDatum> q = this.inQueue == null ? new ArrayBlockingQueue<StreamsDatum>(100) :
-                (this.inQueue instanceof ArrayBlockingQueue ? (ArrayBlockingQueue<StreamsDatum>)this.inQueue : new ArrayBlockingQueue<StreamsDatum>(50));
         if(this.processor != null) {
-            // create the task
 
-            task = new StreamsProcessorTask(this.id, config, this.processor);
+            // create the task
+            task = new StreamsProcessorTask(this.threadingController, this.id, config, this.processor);
 
             // Processor also has any number of output queues
             for(StreamComponent c : this.outBound.keySet()) {
@@ -188,18 +192,17 @@ class StreamComponent {
         }
         else if(this.writer != null) {
             // create the task
-            task = new StreamsPersistWriterTask(this.id, config, this.writer);
+            task = new StreamsPersistWriterTask(this.threadingController, this.id, config, this.writer);
         }
         else if(this.provider != null) {
 
-            task = new StreamsProviderTask(this.id, config, this.provider, StreamsProviderTask.Type.READ_CURRENT);
-
+            task = new StreamsProviderTask(this.threadingController, this.id, config, this.provider, StreamsProviderTask.Type.READ_CURRENT);
             for(StreamComponent c : this.outBound.keySet())
                 task.addOutputQueue(c.getId());
 
         }
         else {
-            throw new InvalidStreamException("Underlying StreamComponoent was NULL.");
+            throw new InvalidStreamException("Underlying StreamComponent was NULL.");
         }
 
         return task;

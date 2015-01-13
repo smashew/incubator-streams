@@ -37,6 +37,7 @@ public abstract class BaseStreamsTask implements StreamsTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BaseStreamsTask.class);
 
+    private final ThreadingController threadingController;
     private final StreamsOperation streamsOperation;
     private final String id;
     private String type;
@@ -51,7 +52,8 @@ public abstract class BaseStreamsTask implements StreamsTask {
     private boolean isPrepared = false;
     private boolean isCleanedUp = false;
 
-    BaseStreamsTask(String id, Map<String, Object> config, StreamsOperation streamsOperation) {
+    BaseStreamsTask(ThreadingController threadingController, String id, Map<String, Object> config, StreamsOperation streamsOperation) {
+        this.threadingController = threadingController;
         this.id = id;
         this.config = config;
         this.streamsOperation = streamsOperation;
@@ -89,6 +91,10 @@ public abstract class BaseStreamsTask implements StreamsTask {
     @Override
     public final String getId() {
         return this.id;
+    }
+
+    protected ThreadingController getThreadingController() {
+        return this.threadingController;
     }
 
     public String getType() {

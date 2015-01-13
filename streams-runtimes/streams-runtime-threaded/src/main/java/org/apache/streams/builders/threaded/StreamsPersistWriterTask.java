@@ -32,8 +32,8 @@ public class StreamsPersistWriterTask extends BaseStreamsTask {
 
     protected final StreamsPersistWriter writer;
 
-    public StreamsPersistWriterTask(String id, Map<String, Object> config, StreamsPersistWriter writer) {
-        super(id, config, writer);
+    public StreamsPersistWriterTask(ThreadingController threadingController, String id, Map<String, Object> config, StreamsPersistWriter writer) {
+        super(threadingController, id, config, writer);
         this.writer = writer;
     }
 
