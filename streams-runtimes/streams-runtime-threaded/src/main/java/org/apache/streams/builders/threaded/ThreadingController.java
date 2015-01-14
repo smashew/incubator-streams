@@ -18,7 +18,7 @@ public class ThreadingController {
     private static final Logger LOGGER = LoggerFactory.getLogger(ThreadingController.class);
 
     private final String name;
-    private final int maxNumberOfTheads;
+    private final int maxNumberOfThreads;
     private final int priority;
     private final ThreadPoolExecutor threadPoolExecutor;
     private final ListeningExecutorService listeningExecutorService;
@@ -37,7 +37,7 @@ public class ThreadingController {
 
     private static final Integer NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
-    public static final ThreadingController INSTANCE_LOW_PRIORITY = new ThreadingController("Apache Streams [high]", NUM_PROCESSORS, NUM_PROCESSORS * 2, Thread.NORM_PRIORITY - 2);
+    public static final ThreadingController INSTANCE_LOW_PRIORITY = new ThreadingController("Apache Streams [low]", NUM_PROCESSORS, NUM_PROCESSORS * 2, Thread.NORM_PRIORITY - 2);
     public static final ThreadingController INSTANCE = new ThreadingController("Apache Streams [default]", NUM_PROCESSORS, NUM_PROCESSORS * 5, Thread.NORM_PRIORITY);
     public static final ThreadingController INSTANCE_HIGH_PRIORITY = new ThreadingController("Apache Streams [high]", NUM_PROCESSORS, NUM_PROCESSORS * 7, Thread.NORM_PRIORITY + 2);
 
@@ -139,7 +139,7 @@ public class ThreadingController {
 
         this.name = name;
         this.numThreads = new AtomicInteger(startThreadCount);
-        this.maxNumberOfTheads = maxNumberOfThreads;
+        this.maxNumberOfThreads = maxNumberOfThreads;
         this.priority = priority;
 
         this.threadPoolExecutor = new ThreadPoolExecutor(
@@ -197,7 +197,7 @@ public class ThreadingController {
             /* Adjust to keep the processor between 72% & 88% */
             if (average < this.scaleThreshold * .9) {
                 /* The processor isn't being worked that hard, we can add the unit here */
-                newThreadCount = Math.min(this.maxNumberOfTheads, (newThreadCount + 1));
+                newThreadCount = Math.min(this.maxNumberOfThreads, (newThreadCount + 1));
                 if(newThreadCount != currentThreadCount) {
                     LOGGER.info("+++++++ SCALING UP THREAD POOL TO {} THREADS (CPU @ {}) ++++++++", newThreadCount, average);
                 }

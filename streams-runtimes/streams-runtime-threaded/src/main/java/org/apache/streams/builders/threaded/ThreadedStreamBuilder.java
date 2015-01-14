@@ -356,4 +356,7 @@ public class ThreadedStreamBuilder implements StreamBuilder {
         return streamConfig != null && streamConfig.containsKey(TIMEOUT_KEY) ? (Integer) streamConfig.get(TIMEOUT_KEY) : 3000;
     }
 
+    public ThreadingController getThreadingController() {
+        return threadingController;
+    }
 }
