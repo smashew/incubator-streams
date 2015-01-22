@@ -47,8 +47,7 @@ public class S3OutputStreamWrapper implements Flushable
 
     private final TransferManager transferManager;
     private final String bucketName;
-    private final String path;
-    private final String fileName;
+    private final String fileKey;
     private final File file;
     private final OutputStreamWriter outputStream;
     private final Map<String, String> metaData;
@@ -74,10 +73,13 @@ public class S3OutputStreamWrapper implements Flushable
     }
 
     public S3OutputStreamWrapper(TransferManager transferManager, String bucketName, String path, String fileName, Map<String, String> metaData) throws IOException {
+        this(transferManager, bucketName, fileKey(path, fileName), metaData);
+    }
+
+    public S3OutputStreamWrapper(TransferManager transferManager, String bucketName, String fileKey, Map<String, String> metaData) throws IOException {
         this.transferManager = transferManager;
         this.bucketName = bucketName;
-        this.path = path;
-        this.fileName = fileName;
+        this.fileKey = fileKey;
         this.metaData = metaData != null ? metaData : new HashMap<String, String>();
         this.file = File.createTempFile("aws-s3-temp", ".tsv");
         this.file.deleteOnExit();
@@ -118,7 +120,7 @@ public class S3OutputStreamWrapper implements Flushable
                     @Override
                     public void progressChanged(ProgressEvent progressEvent) {
                         if(progressEvent.getEventType().equals(ProgressEventType.TRANSFER_COMPLETED_EVENT)) {
-                            LOGGER.info("File COMPLETED: {}", fileName);
+                            LOGGER.info("File COMPLETED: {}", fileKey);
                             if(!file.delete()) {
                                 LOGGER.warn("Unable to delete temporary file: {}", file.getAbsolutePath());
                             }
@@ -126,7 +128,7 @@ public class S3OutputStreamWrapper implements Flushable
                                 callback.completed();
                             }
                         } else if(progressEvent.getEventType().equals(ProgressEventType.TRANSFER_FAILED_EVENT)) {
-                            LOGGER.warn("File was unable to upload", fileName);
+                            LOGGER.warn("File was unable to upload", fileKey);
                             if(callback != null) {
                                 callback.error();
                             }
@@ -144,12 +146,17 @@ public class S3OutputStreamWrapper implements Flushable
         }
     }
 
+    private static String fileKey(final String path, final String fileName) {
+        return (path.endsWith("/") ? path.replaceAll("/+", "/") : path + "/") + fileName;
+    }
+
+
     private void addFile(S3ProgressListener s3ProgressListener) throws Exception {
 
         this.outputStream.flush();
         this.outputStream.close();
 
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, path + fileName, this.file);
+        PutObjectRequest putObjectRequest = new PutObjectRequest(this.bucketName, this.fileKey, this.file);
 
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setExpirationTime(DateTime.now().plusDays(365 * 3).toDate());
@@ -161,7 +168,7 @@ public class S3OutputStreamWrapper implements Flushable
 
         transferManager.upload(putObjectRequest, s3ProgressListener);
 
-        LOGGER.info("AddFile Complete: {}", fileName);
+        LOGGER.info("AddFile Complete: {}", this.fileKey);
 
     }
 
