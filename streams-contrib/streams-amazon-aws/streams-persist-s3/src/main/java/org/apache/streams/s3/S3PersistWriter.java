@@ -198,7 +198,7 @@ public class S3PersistWriter implements StreamsPersistWriter, DatumStatusCountab
         if(writer != null) {
             try {
                 outstanding.incrementAndGet();
-                writer.closeWithNotification(new S3OutputStreamWrapper.S3OutputStreamWrapperCloseCallback() {
+                writer.closeWithNotification(new S3OutputStreamWrapperCloseCallback() {
                     @Override
                     public void completed() {
                         outstanding.decrementAndGet();
