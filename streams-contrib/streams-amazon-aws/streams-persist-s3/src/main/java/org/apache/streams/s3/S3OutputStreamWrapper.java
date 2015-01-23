@@ -36,12 +36,7 @@ import java.util.Map;
 /**
  * This class writes to a temporary file on disk, then it uploads that temporary file whenever the file is closed.
  */
-public class S3OutputStreamWrapper implements Flushable
-{
-    public interface S3OutputStreamWrapperCloseCallback {
-        void completed();
-        void error();
-    }
+public class S3OutputStreamWrapper implements Flushable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3OutputStreamWrapper.class);
 
@@ -103,7 +98,18 @@ public class S3OutputStreamWrapper implements Flushable
      * An asynchronous close. Upon close the file is written
      */
     public void close() {
-        closeWithNotification(null);
+        SimpleS3OutputStreamCallback callback = new SimpleS3OutputStreamCallback();
+
+        closeWithNotification(callback);
+
+        while(!callback.isClosed()) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                /* */
+            }
+        }
+
     }
 
     public void closeWithNotification(final S3OutputStreamWrapperCloseCallback callback) {
