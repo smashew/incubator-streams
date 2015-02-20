@@ -55,8 +55,8 @@ public class TestLinkUnwinderProcessor {
 
     @Test
     public void testActivityLinkUnwinderProcessorTdotCo() throws Exception{
-        testActivityUnwinderHelper(Lists.newArrayList("http://t.co/XDkGt0vJaF"), Lists.newArrayList("http://instagram.com/p/ibkJDWK97z/"));
-        testStringActivityUnwinderHelper(Lists.newArrayList("http://t.co/XDkGt0vJaF"), Lists.newArrayList("http://instagram.com/p/ibkJDWK97z/"));
+        testActivityUnwinderHelper(Lists.newArrayList("http://t.co/XDkGt0vJaF"), Lists.newArrayList("https://instagram.com/p/ibkJDWK97z/"));
+        testStringActivityUnwinderHelper(Lists.newArrayList("http://t.co/XDkGt0vJaF"), Lists.newArrayList("https://instagram.com/p/ibkJDWK97z/"));
     }
 
     @Test
